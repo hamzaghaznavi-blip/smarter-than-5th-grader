@@ -12,8 +12,6 @@ import {
   Flag,
   Laugh,
   Link2,
-  Copy,
-  Check,
 } from 'lucide-react';
 
 /** Lazy-load confetti so initial JS stays smaller and main thread work is deferred. */
@@ -67,7 +65,14 @@ const QUESTIONS_PER_SUBJECT = 5;
 const TIMER_SECONDS_RELAXED = 14;
 const TIMER_SECONDS_RAPID = 6;
 
+/**
+ * Informal mode is implemented but not publicly exposed yet.
+ * Flip this to `true` later to re-enable: mode selector, mode URLs, and voice roasts.
+ */
+const ENABLE_INFORMAL_MODE = false;
+
 function readInitialPresentationMode(): PresentationMode {
+  if (!ENABLE_INFORMAL_MODE) return 'formal';
   if (typeof window === 'undefined') return 'formal';
   try {
     const m = new URLSearchParams(window.location.search).get('mode');
@@ -346,7 +351,7 @@ export default function SmarterThan5thGraderApp() {
     uneesBeesActive: false,
     uneesBeesSelections: [],
     londaPollPlayerId: null,
-    presentationMode: readInitialPresentationMode(),
+    presentationMode: ENABLE_INFORMAL_MODE ? readInitialPresentationMode() : 'formal',
   }));
 
   const [newPlayerName, setNewPlayerName] = useState('');
@@ -364,7 +369,6 @@ export default function SmarterThan5thGraderApp() {
   const [customAdjust, setCustomAdjust] = useState<Record<string, string>>({});
   /** Informal mode: random Urdu roast line (G4–6) after wrong answer */
   const [informalRoast, setInformalRoast] = useState<string | null>(null);
-  const [copiedModeLink, setCopiedModeLink] = useState<PresentationMode | null>(null);
 
   useEffect(() => {
     if (!informalRoast) return;
@@ -374,6 +378,7 @@ export default function SmarterThan5thGraderApp() {
 
   /** Bookmarkable Formal / Informal entry (setup only). */
   useEffect(() => {
+    if (!ENABLE_INFORMAL_MODE) return;
     if (gameState.gamePhase !== 'SETUP') return;
     try {
       const url = new URL(window.location.href);
@@ -383,17 +388,6 @@ export default function SmarterThan5thGraderApp() {
       /* ignore */
     }
   }, [gameState.presentationMode, gameState.gamePhase]);
-
-  const copyModeLink = useCallback(async (mode: PresentationMode) => {
-    const url = shareUrlForMode(mode);
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopiedModeLink(mode);
-      window.setTimeout(() => setCopiedModeLink(null), 2200);
-    } catch {
-      /* ignore */
-    }
-  }, []);
 
   const resetQuestionUI = useCallback(() => {
     setHostRevealAll(false);
@@ -593,7 +587,7 @@ export default function SmarterThan5thGraderApp() {
     if (isCorrect) {
       fireConfetti({ particleCount: 120, spread: 70, origin: { y: 0.6 }, colors: ['#00FF88', '#3B82F6', '#F59E0B'] });
     }
-    if (!isCorrect && gameState.presentationMode === 'informal') {
+    if (ENABLE_INFORMAL_MODE && !isCorrect && gameState.presentationMode === 'informal') {
       cancelInformalSpeech();
       playWrongAnswerSound({ loud: true });
       if (grade >= 4) {
@@ -896,7 +890,7 @@ export default function SmarterThan5thGraderApp() {
                 Smarter Than a 5th Grader
               </p>
               <p className="text-[10px] sm:text-xs font-mono uppercase tracking-widest text-neon-green/90 font-bold mt-0.5">
-                {gameState.presentationMode === 'informal' ? (
+                {ENABLE_INFORMAL_MODE && gameState.presentationMode === 'informal' ? (
                   <span className="text-hot-pink">Informal · buzzer + voice roasts (G4–6)</span>
                 ) : (
                   <span className="text-neon-green/90">Formal · silent scoring · executive mode</span>
@@ -1079,88 +1073,66 @@ export default function SmarterThan5thGraderApp() {
                   </AnimatePresence>
                 </div>
 
-                <div className="space-y-3">
-                  <p className="text-xs font-mono font-bold uppercase text-white/40 tracking-wider">Mode</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setGameState((prev) => ({ ...prev, presentationMode: 'formal' }))}
-                      className={cn(
-                        'py-4 px-4 rounded-xl border-2 font-mono text-xs font-bold uppercase transition-all',
-                        gameState.presentationMode === 'formal'
-                          ? 'border-neon-green bg-neon-green/10 text-neon-green'
-                          : 'border-white/15 bg-white/5 text-white/50 hover:border-white/25',
-                      )}
-                    >
-                      Formal
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setGameState((prev) => ({ ...prev, presentationMode: 'informal' }))}
-                      className={cn(
-                        'py-4 px-4 rounded-xl border-2 font-mono text-xs font-bold uppercase transition-all flex items-center justify-center gap-2',
-                        gameState.presentationMode === 'informal'
-                          ? 'border-hot-pink bg-hot-pink/10 text-hot-pink'
-                          : 'border-white/15 bg-white/5 text-white/50 hover:border-white/25',
-                      )}
-                    >
-                      <Laugh className="w-4 h-4" />
-                      Informal
-                    </button>
-                  </div>
-                  <p className="text-[11px] font-mono text-white/35 leading-relaxed">
-                    Informal: loud buzzer + spoken roasts (Urdu male / Punjabi female mix, browser voices).
-                    Grades 4–6. Formal: no sound.
-                  </p>
-                </div>
+                {ENABLE_INFORMAL_MODE && (
+                  <>
+                    <div className="space-y-3">
+                      <p className="text-xs font-mono font-bold uppercase text-white/40 tracking-wider">Mode</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setGameState((prev) => ({ ...prev, presentationMode: 'formal' }))}
+                          className={cn(
+                            'py-4 px-4 rounded-xl border-2 font-mono text-xs font-bold uppercase transition-all',
+                            gameState.presentationMode === 'formal'
+                              ? 'border-neon-green bg-neon-green/10 text-neon-green'
+                              : 'border-white/15 bg-white/5 text-white/50 hover:border-white/25',
+                          )}
+                        >
+                          Formal
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setGameState((prev) => ({ ...prev, presentationMode: 'informal' }))}
+                          className={cn(
+                            'py-4 px-4 rounded-xl border-2 font-mono text-xs font-bold uppercase transition-all flex items-center justify-center gap-2',
+                            gameState.presentationMode === 'informal'
+                              ? 'border-hot-pink bg-hot-pink/10 text-hot-pink'
+                              : 'border-white/15 bg-white/5 text-white/50 hover:border-white/25',
+                          )}
+                        >
+                          <Laugh className="w-4 h-4" />
+                          Informal
+                        </button>
+                      </div>
+                      <p className="text-[11px] font-mono text-white/35 leading-relaxed">
+                        Informal: loud buzzer + spoken roasts (Urdu male / Punjabi female mix, browser voices).
+                        Grades 4–6. Formal: no sound.
+                      </p>
+                    </div>
 
-                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 space-y-3">
-                  <div className="flex items-center gap-2 text-[10px] font-mono font-bold uppercase tracking-wider text-white/45">
-                    <Link2 className="w-3.5 h-3.5" />
-                    Direct links (bookmark or share)
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => void copyModeLink('formal')}
-                      className="flex items-center justify-between gap-2 rounded-xl border border-neon-green/25 bg-neon-green/5 px-4 py-3 text-left font-mono text-[11px] text-neon-green/90 hover:bg-neon-green/10 transition-colors"
-                    >
-                      <span className="truncate font-bold uppercase">Formal URL</span>
-                      {copiedModeLink === 'formal' ? (
-                        <Check className="w-4 h-4 shrink-0 text-neon-green" />
-                      ) : (
-                        <Copy className="w-4 h-4 shrink-0 opacity-70" />
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void copyModeLink('informal')}
-                      className="flex items-center justify-between gap-2 rounded-xl border border-hot-pink/25 bg-hot-pink/5 px-4 py-3 text-left font-mono text-[11px] text-hot-pink/90 hover:bg-hot-pink/10 transition-colors"
-                    >
-                      <span className="truncate font-bold uppercase">Informal URL</span>
-                      {copiedModeLink === 'informal' ? (
-                        <Check className="w-4 h-4 shrink-0 text-hot-pink" />
-                      ) : (
-                        <Copy className="w-4 h-4 shrink-0 opacity-70" />
-                      )}
-                    </button>
-                  </div>
-                  <div className="space-y-1.5 text-[10px] font-mono text-white/30 break-all leading-snug">
-                    <p>
-                      <span className="text-neon-green/55 font-bold uppercase mr-1.5">Formal</span>
-                      {shareUrlForMode('formal')}
-                    </p>
-                    <p>
-                      <span className="text-hot-pink/55 font-bold uppercase mr-1.5">Informal</span>
-                      {shareUrlForMode('informal')}
-                    </p>
-                  </div>
-                </div>
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 space-y-3">
+                      <div className="flex items-center gap-2 text-[10px] font-mono font-bold uppercase tracking-wider text-white/45">
+                        <Link2 className="w-3.5 h-3.5" />
+                        Direct links (bookmark or share)
+                      </div>
+                      <div className="space-y-1.5 text-[10px] font-mono text-white/30 break-all leading-snug">
+                        <p>
+                          <span className="text-neon-green/55 font-bold uppercase mr-1.5">Formal</span>
+                          {shareUrlForMode('formal')}
+                        </p>
+                        <p>
+                          <span className="text-hot-pink/55 font-bold uppercase mr-1.5">Informal</span>
+                          {shareUrlForMode('informal')}
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 <button
                   onClick={() => {
                     if (gameState.players.length < 1) return;
-                    warmupSpeechSynthesis();
+                    if (ENABLE_INFORMAL_MODE && gameState.presentationMode === 'informal') warmupSpeechSynthesis();
                     const next: GameState = { ...gameState, gamePhase: 'CATEGORY_SELECTION' };
                     setGameState(next);
                     const name = randomSessionName();
