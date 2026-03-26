@@ -26,6 +26,7 @@ export function deserializeGameState(s: SerializedGameState): GameState {
     londaPollPlayerId: s.londaPollPlayerId ?? null,
     players: s.players.map((p) => ({
       ...p,
+      giftsEarned: (p as unknown as { giftsEarned?: number }).giftsEarned ?? 0,
       hasUsedUneesBees: p.hasUsedUneesBees ?? false,
       hasUsedLondaPoll: p.hasUsedLondaPoll === true,
     })),

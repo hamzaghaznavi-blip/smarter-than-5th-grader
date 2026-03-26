@@ -12,6 +12,7 @@ import {
   Flag,
   Laugh,
   Link2,
+  Gift,
 } from 'lucide-react';
 
 /** Lazy-load confetti so initial JS stays smaller and main thread work is deferred. */
@@ -198,6 +199,7 @@ const pointsForCorrectWithLonda = (
 const formatScore = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 
 type ScorePopup = { id: string; playerId: string; delta: number; timestamp: number };
+type GiftNotice = { id: string; text: string; timestamp: number };
 
 const SUBJECT_ICONS: Record<string, string> = {
   'Maths': '🔢',
@@ -365,6 +367,7 @@ export default function SmarterThan5thGraderApp() {
   const [resumeSessionName, setResumeSessionName] = useState<string | null>(null);
   const [hostRevealAll, setHostRevealAll] = useState(false);
   const [scorePopups, setScorePopups] = useState<ScorePopup[]>([]);
+  const [giftNotices, setGiftNotices] = useState<GiftNotice[]>([]);
   const [hostPanelOpen, setHostPanelOpen] = useState(false);
   const [customAdjust, setCustomAdjust] = useState<Record<string, string>>({});
   /** Informal mode: random Urdu roast line (G4–6) after wrong answer */
@@ -490,6 +493,12 @@ export default function SmarterThan5thGraderApp() {
     }, 1500);
   }, []);
 
+  const pushGiftNotice = useCallback((text: string) => {
+    const n: GiftNotice = { id: Math.random().toString(36).slice(2, 9), text, timestamp: Date.now() };
+    setGiftNotices((prev) => [...prev, n]);
+    window.setTimeout(() => setGiftNotices((prev) => prev.filter((x) => x.id !== n.id)), 4200);
+  }, []);
+
   const addPlayer = useCallback(() => {
     if (newPlayerName.trim() && gameState.players.length < 7) {
       const newPlayer: Player = {
@@ -497,6 +506,7 @@ export default function SmarterThan5thGraderApp() {
         name: newPlayerName.trim(),
         totalScore: 0,
         subjectScore: 0,
+        giftsEarned: 0,
         hasUsedUneesBees: false,
         hasUsedLondaPoll: false,
       };
@@ -602,6 +612,7 @@ export default function SmarterThan5thGraderApp() {
     setIsTimerRunning(false);
 
     const playerName = gameState.players.find((p) => p.id === playerId)?.name ?? playerId;
+    const prevTotal = gameState.players.find((p) => p.id === playerId)?.totalScore ?? 0;
     let scoreChange = 0;
     if (isCorrect) {
       const londaNote = playerId === gameState.londaPollPlayerId ? ' [Londa ½]' : '';
@@ -616,13 +627,27 @@ export default function SmarterThan5thGraderApp() {
 
     showScorePopup(playerId, scoreChange);
 
+    // Gift milestones: every 20 total points earns 1 gift (40 = 2 gifts, etc.)
+    const nextTotal = prevTotal + scoreChange;
+    const prevMilestones = Math.floor(prevTotal / 20);
+    const nextMilestones = Math.floor(nextTotal / 20);
+    if (nextMilestones > prevMilestones) {
+      const gained = nextMilestones - prevMilestones;
+      const msg = `${playerName} earned ${gained} gift${gained === 1 ? '' : 's'}! Total gifts: ${nextMilestones}`;
+      pushGiftNotice(msg);
+      logScoreEvent(`[GIFT] ${msg}`);
+    }
+
     setGameState((prev) => {
       const newPlayers = prev.players.map((p) => {
         if (p.id !== playerId) return p;
+        const newTotal = p.totalScore + scoreChange;
+        const newGifts = Math.max(p.giftsEarned ?? 0, Math.floor(newTotal / 20));
         return {
           ...p,
-          totalScore: p.totalScore + scoreChange,
+          totalScore: newTotal,
           subjectScore: p.subjectScore + scoreChange,
+          giftsEarned: newGifts,
         };
       });
 
@@ -800,11 +825,8 @@ export default function SmarterThan5thGraderApp() {
 
   /** Visual-only “game show” ambience — does not affect gameplay. */
   const wowMode = useMemo((): WowMode => {
-    if (gameState.gamePhase === 'QUESTION' && gameState.currentGrade != null) {
-      const g = gameState.currentGrade;
-      if (g <= 3) return 'warm';
-      return 'hot';
-    }
+    // During questions: freeze ambience for maximum legibility (CEO/demo friendly).
+    if (gameState.gamePhase === 'QUESTION') return 'off';
     if (gameState.gamePhase === 'GAME_OVER' || gameState.gamePhase === 'SUBJECT_RESULTS') {
       return 'finale';
     }
@@ -819,6 +841,31 @@ export default function SmarterThan5thGraderApp() {
       {scorePopups.map((p) => (
         <ScoreFloat key={p.id} popup={p} />
       ))}
+
+      {/* Gift milestone notices */}
+      <AnimatePresence>
+        {giftNotices.slice(-2).map((n) => (
+          <motion.div
+            key={n.id}
+            role="status"
+            initial={{ opacity: 0, y: 30, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 24 }}
+            className="fixed top-24 left-1/2 z-[92] w-[min(92vw,34rem)] -translate-x-1/2 px-5 py-4 rounded-2xl border border-amber-glow/35 bg-amber-glow/10 backdrop-blur-md shadow-[0_0_40px_rgba(245,158,11,0.18)]"
+          >
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-glow/15 border border-amber-glow/25 flex items-center justify-center shrink-0">
+                <Gift className="w-5 h-5 text-amber-glow" aria-hidden />
+              </div>
+              <div>
+                <p className="text-base sm:text-lg font-black text-white leading-snug">{n.text}</p>
+                <p className="text-[10px] font-mono text-white/35 mt-1 uppercase tracking-wider">Host gift milestone · every +20 points</p>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </AnimatePresence>
 
       {/* Informal mode: roast line (G4–6 wrong answers) */}
       <AnimatePresence>
@@ -956,6 +1003,12 @@ export default function SmarterThan5thGraderApp() {
                 >
                   {i === 0 && <Crown className="w-3 h-3" />}
                   {p.name}: <span className="text-neon-green">{formatScore(p.totalScore)}</span>
+                  {p.giftsEarned > 0 && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-glow/10 border border-amber-glow/25 text-amber-glow/90">
+                      <Gift className="w-3 h-3" aria-hidden />
+                      {p.giftsEarned}
+                    </span>
+                  )}
                 </span>
               ))}
             </div>
@@ -1285,8 +1338,12 @@ export default function SmarterThan5thGraderApp() {
               }
               className="space-y-8"
             >
+              {/* Minimal question backdrop for maximum clarity */}
+              <div className="pointer-events-none fixed inset-0 z-[2] bg-gradient-to-b from-[#070A0F] via-[#070A0F] to-[#05070B]" aria-hidden />
+              <div className="pointer-events-none fixed inset-0 z-[3] bg-[radial-gradient(ellipse_80%_60%_at_50%_20%,rgba(59,130,246,0.10),transparent_55%),radial-gradient(ellipse_70%_50%_at_15%_85%,rgba(0,255,136,0.06),transparent_55%)]" aria-hidden />
+
               {/* Question header */}
-              <div className="flex justify-between items-center">
+              <div className="relative z-[5] flex justify-between items-center">
                 <div>
                   <p className="text-xs font-mono uppercase text-white/40 tracking-widest">
                     {gameState.currentSubject} · Grade {gameState.currentGrade} · +{formatScore(pointsForCorrect(gameState.currentGrade ?? 1))} pts
@@ -1309,15 +1366,10 @@ export default function SmarterThan5thGraderApp() {
               </div>
 
               {/* Question card — THE hero of the page (rim: calmer G1–3, intense G4–6) */}
-              <div
-                className={cn(
-                  'relative rounded-3xl p-[1px] wow-q-frame',
-                  (gameState.currentGrade ?? 1) <= 3 && 'wow-q-frame--warm',
-                  (gameState.currentGrade ?? 1) >= 4 && 'wow-q-frame--hot',
-                )}
-              >
-                <div className="bg-white/[0.04] rounded-3xl p-8 sm:p-12 lg:p-14 backdrop-blur-sm border border-white/[0.07]">
-                <h3 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-display leading-[1.08] tracking-tight mb-10 text-white">
+              <div className="relative z-[5] rounded-3xl border border-white/10 bg-[#0B0F14] shadow-2xl shadow-black/60 ring-1 ring-white/[0.06] overflow-hidden">
+                <div className="absolute inset-0 opacity-[0.22] bg-[radial-gradient(ellipse_120%_90%_at_50%_0%,rgba(255,255,255,0.06),transparent_60%)]" aria-hidden />
+                <div className="relative p-8 sm:p-12 lg:p-14">
+                <h3 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-display leading-[1.1] tracking-tight mb-10 text-white drop-shadow-[0_2px_18px_rgba(0,0,0,0.55)]">
                   {gameState.currentQuestion.question}
                 </h3>
 
@@ -1334,16 +1386,16 @@ export default function SmarterThan5thGraderApp() {
                           else setHostRevealAll(true);
                         }}
                         className={cn(
-                          'p-5 rounded-xl border-2 text-xl sm:text-2xl font-bold text-left transition-all active:scale-[0.98]',
+                          'p-5 rounded-2xl border text-xl sm:text-2xl font-bold text-left transition-all active:scale-[0.98]',
                           hostRevealAll
                             ? isCorrectOpt
                               ? 'bg-neon-green/20 text-neon-green border-neon-green/50 ring-2 ring-neon-green/30'
-                              : 'bg-red-500/10 text-red-400 border-red-500/30'
+                              : 'bg-red-500/10 text-red-300 border-red-500/30'
                             : uneesOn
                               ? gameState.uneesBeesSelections.includes(option)
                                 ? 'bg-neon-green/15 border-neon-green/40 text-neon-green'
-                                : 'bg-white/[0.03] border-white/10 text-white/70 hover:bg-white/5'
-                              : 'bg-white/[0.03] border-white/10 text-white/80 hover:bg-white/5 hover:border-white/20',
+                                : 'bg-white/[0.03] border-white/10 text-white/75 hover:bg-white/5 hover:border-white/15'
+                              : 'bg-white/[0.03] border-white/10 text-white/85 hover:bg-white/5 hover:border-white/15',
                         )}
                       >
                         <span className="text-electric-blue mr-3 font-mono text-base">{String.fromCharCode(65 + idx)}.</span>

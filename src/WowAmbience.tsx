@@ -1,6 +1,6 @@
 import { cn } from './lib/utils';
 
-export type WowMode = 'idle' | 'warm' | 'hot' | 'finale';
+export type WowMode = 'off' | 'idle' | 'warm' | 'hot' | 'finale';
 
 /**
  * Purely decorative “game show” ambience — pointer-events none, no game logic.
@@ -10,6 +10,7 @@ export type WowMode = 'idle' | 'warm' | 'hot' | 'finale';
  * - finale: subject results / game over
  */
 export function WowAmbience({ mode }: { mode: WowMode }) {
+  if (mode === 'off') return null;
   const questionHeat = mode === 'warm' || mode === 'hot';
 
   return (

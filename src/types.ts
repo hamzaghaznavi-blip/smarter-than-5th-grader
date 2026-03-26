@@ -27,6 +27,8 @@ export interface Player {
   name: string;
   totalScore: number;
   subjectScore: number;
+  /** Number of gifts earned from host milestones (every +20 total points). */
+  giftsEarned: number;
   hasUsedUneesBees: boolean;
   /** Londa poll: half points if correct; once per game per player */
   hasUsedLondaPoll: boolean;
