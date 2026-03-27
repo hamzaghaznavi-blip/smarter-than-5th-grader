@@ -825,16 +825,15 @@ export default function SmarterThan5thGraderApp() {
 
   /** Visual-only “game show” ambience — does not affect gameplay. */
   const wowMode = useMemo((): WowMode => {
-    // During questions: freeze ambience for maximum legibility (CEO/demo friendly).
-    if (gameState.gamePhase === 'QUESTION') return 'off';
+    if (gameState.gamePhase === 'QUESTION') return 'question';
     if (gameState.gamePhase === 'GAME_OVER' || gameState.gamePhase === 'SUBJECT_RESULTS') {
       return 'finale';
     }
     return 'idle';
-  }, [gameState.gamePhase, gameState.currentGrade]);
+  }, [gameState.gamePhase]);
 
   return (
-    <div className="min-h-screen bg-brutal-black text-gallery-white font-sans noise-bg relative">
+    <div className="min-h-screen bg-brutal-black text-gallery-white font-sans relative">
       <WowAmbience mode={wowMode} />
 
       {/* Score popups (plain DOM — no layout animation cost) */}
@@ -851,8 +850,8 @@ export default function SmarterThan5thGraderApp() {
             initial={{ opacity: 0, y: 30, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20 }}
-            transition={{ type: 'spring', stiffness: 260, damping: 24 }}
-            className="fixed top-24 left-1/2 z-[92] w-[min(92vw,34rem)] -translate-x-1/2 px-5 py-4 rounded-2xl border border-amber-glow/35 bg-amber-glow/10 backdrop-blur-md shadow-[0_0_40px_rgba(245,158,11,0.18)]"
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+            className="fixed top-24 left-1/2 z-[92] w-[min(92vw,34rem)] -translate-x-1/2 px-5 py-4 rounded-2xl border border-amber-glow/35 bg-[#141008]/95 shadow-[0_8px_32px_rgba(0,0,0,0.45)]"
           >
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-xl bg-amber-glow/15 border border-amber-glow/25 flex items-center justify-center shrink-0">
@@ -876,8 +875,8 @@ export default function SmarterThan5thGraderApp() {
             initial={{ opacity: 0, y: 40, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-            className="fixed bottom-8 left-1/2 z-[95] w-[min(92vw,28rem)] -translate-x-1/2 px-5 py-4 rounded-2xl border border-hot-pink/40 bg-hot-pink/15 backdrop-blur-md shadow-[0_0_40px_rgba(236,72,153,0.2)]"
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+            className="fixed bottom-8 left-1/2 z-[95] w-[min(92vw,28rem)] -translate-x-1/2 px-5 py-4 rounded-2xl border border-hot-pink/40 bg-[#1a0f16]/95 shadow-[0_8px_32px_rgba(0,0,0,0.45)]"
           >
             <p className="flex items-start gap-3 text-left">
               <Laugh className="w-6 h-6 text-hot-pink shrink-0 mt-0.5" aria-hidden />
@@ -920,14 +919,14 @@ export default function SmarterThan5thGraderApp() {
       )}
 
       {/* ── Header ── */}
-      <header className="relative z-40 border-b border-white/10 bg-brutal-black/80 backdrop-blur-xl sticky top-0">
+      <header className="relative z-40 border-b border-white/10 bg-[#0a0a0f]/95 sticky top-0">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <div className="relative">
               <div className="bg-gradient-to-br from-neon-green to-electric-blue p-3 rounded-2xl">
                 <Trophy className="w-7 h-7 text-brutal-black" />
               </div>
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-neon-green rounded-full animate-pulse" />
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-neon-green rounded-full opacity-90" />
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl md:text-3xl font-display uppercase leading-none tracking-tight text-white">
@@ -1077,7 +1076,7 @@ export default function SmarterThan5thGraderApp() {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.2, type: 'spring' }}
-                className="bg-white/[0.04] border border-white/10 rounded-3xl p-8 sm:p-10 space-y-8 backdrop-blur-md shadow-2xl shadow-black/50 ring-1 ring-white/[0.07]"
+                className="bg-[#0c0e14] border border-white/10 rounded-3xl p-8 sm:p-10 space-y-8 shadow-2xl shadow-black/40 ring-1 ring-white/[0.06]"
               >
                 <div className="flex gap-3">
                   <input
@@ -1328,20 +1327,12 @@ export default function SmarterThan5thGraderApp() {
           {gameState.gamePhase === 'QUESTION' && gameState.currentQuestion && (
             <motion.div
               key="q"
-              initial={{ opacity: 0, scale: 1.02 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
-              transition={
-                (gameState.currentGrade ?? 1) >= 4
-                  ? { type: 'spring', stiffness: 260, damping: 24 }
-                  : { type: 'spring', stiffness: 120, damping: 20 }
-              }
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.12, ease: 'easeOut' }}
               className="space-y-8"
             >
-              {/* Minimal question backdrop for maximum clarity */}
-              <div className="pointer-events-none fixed inset-0 z-[2] bg-gradient-to-b from-[#070A0F] via-[#070A0F] to-[#05070B]" aria-hidden />
-              <div className="pointer-events-none fixed inset-0 z-[3] bg-[radial-gradient(ellipse_80%_60%_at_50%_20%,rgba(59,130,246,0.10),transparent_55%),radial-gradient(ellipse_70%_50%_at_15%_85%,rgba(0,255,136,0.06),transparent_55%)]" aria-hidden />
-
               {/* Question header */}
               <div className="relative z-[5] flex justify-between items-center">
                 <div>
@@ -1468,7 +1459,7 @@ export default function SmarterThan5thGraderApp() {
               </div>
 
               {/* Lifelines */}
-              <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 sm:p-6 backdrop-blur-sm">
+              <div className="rounded-2xl border border-white/10 bg-[#0a0c12] p-5 sm:p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <Star className="w-4 h-4 text-amber-glow" />
                   <h2 className="text-sm font-display uppercase tracking-wide text-white/60">
@@ -1778,7 +1769,7 @@ export default function SmarterThan5thGraderApp() {
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="fixed inset-x-0 bottom-0 z-[60] max-h-[60vh] overflow-y-auto border-t border-white/10 bg-brutal-black/95 backdrop-blur-xl shadow-[0_-8px_30px_rgba(0,0,0,0.5)]"
+            className="fixed inset-x-0 bottom-0 z-[60] max-h-[60vh] overflow-y-auto border-t border-white/10 bg-[#0a0a0f] shadow-[0_-8px_30px_rgba(0,0,0,0.5)]"
           >
             <div className="max-w-7xl mx-auto px-4 py-4 space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
