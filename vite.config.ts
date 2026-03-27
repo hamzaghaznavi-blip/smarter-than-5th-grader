@@ -6,6 +6,12 @@ import { defineConfig } from 'vite';
 /** Relative base: works on GitHub Pages for any repo name (no rebuild when you rename). */
 export default defineConfig({
   base: './',
+  server: {
+    port: 5173,
+    strictPort: false,
+    /** Listen on all interfaces so `localhost` / `127.0.0.1` / LAN IP all work. */
+    host: true,
+  },
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
