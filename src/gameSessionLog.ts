@@ -1,6 +1,21 @@
 /** Crash-safe session log: localStorage + optional .txt download (browser cannot write arbitrary paths). */
 
-import type { GameState } from './types';
+import type { GameState, Subject } from './types';
+
+/** Older sessions stored renamed/removed category strings. */
+const LEGACY_SUBJECT_MAP: Record<string, Subject> = {
+  Geography: 'World Geography',
+  'Sub-continent History': 'World History',
+  Cricket: 'NBA',
+  'Pop Culture & Sex Ed': 'Pop Culture',
+  Maths: 'Stats & Maths',
+  Tech: 'FinTech',
+};
+
+function migrateSubjectField(value: string | null | undefined): Subject | null {
+  if (value == null || value === '') return null;
+  return LEGACY_SUBJECT_MAP[value] ?? (value as Subject);
+}
 
 export const SESSION_STORAGE_KEY = 'smarter-than-5th-grader-session-v1';
 
@@ -19,16 +34,24 @@ export function serializeGameState(gs: GameState): SerializedGameState {
 }
 
 export function deserializeGameState(s: SerializedGameState): GameState {
+  const currentSubject = migrateSubjectField(s.currentSubject as unknown as string);
+  const currentQuestion = s.currentQuestion
+    ? {
+        ...s.currentQuestion,
+        subject: migrateSubjectField(s.currentQuestion.subject as unknown as string) ?? s.currentQuestion.subject,
+      }
+    : null;
+
   return {
     ...s,
+    currentSubject,
+    currentQuestion,
     presentationMode: s.presentationMode === 'informal' ? 'informal' : 'formal',
     usedQuestionIds: new Set(s.usedQuestionIds),
-    londaPollPlayerId: s.londaPollPlayerId ?? null,
     players: s.players.map((p) => ({
       ...p,
       giftsEarned: (p as unknown as { giftsEarned?: number }).giftsEarned ?? 0,
       hasUsedUneesBees: p.hasUsedUneesBees ?? false,
-      hasUsedLondaPoll: p.hasUsedLondaPoll === true,
     })),
   };
 }

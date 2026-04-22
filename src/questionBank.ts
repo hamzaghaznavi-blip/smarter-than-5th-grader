@@ -1,8 +1,9 @@
 import type { Grade, Subject } from './types';
-import { worldHistory, subcontinentHistory, geography } from './seeds/group1';
+import { worldHistory, geography } from './seeds/group1';
 import { wrm, science } from './seeds/group2';
-import { cricket, sports, popCultureSexEd } from './seeds/group3';
-import { worldPolitics, tech } from './seeds/group4';
+import { nba, nhl, sports, canadianHistory, popCulture } from './seeds/group3';
+import { worldPolitics, fintech } from './seeds/group4';
+import { workplaceStats } from './seeds/workplaceStats';
 import type { Fact } from './seeds/group1';
 
 export type FactPack = {
@@ -21,8 +22,7 @@ function expandSeeds(rawSeeds: Fact[]): FactPack[] {
 }
 
 /* ──────────────────────────────────────────────
-   Maths generator: 8,000+ per grade via
-   expanded combinatorics
+   Stats & Maths: workplace stats seeds + 8,000+ arithmetic items per grade
    ────────────────────────────────────────────── */
 
 function isPrime(n: number): boolean {
@@ -179,21 +179,28 @@ function gcd(a: number, b: number): number {
   return a;
 }
 
+function statsAndMathsFacts(grade: Grade): FactPack[] {
+  const stats = expandSeeds(workplaceStats[grade] ?? []);
+  const maths = mathsFacts(grade);
+  return [...stats, ...maths].slice(0, 8500);
+}
+
 /* ──────────────────────────────────────────────
    Seed map: subject → grade → Fact[]
    ────────────────────────────────────────────── */
 
 const SEED_MAP: Record<string, Record<number, Fact[]>> = {
   'World History': worldHistory,
-  'Sub-continent History': subcontinentHistory,
-  Geography: geography,
+  'World Geography': geography,
   'World Religion & Mythology': wrm,
   'General Science': science,
-  Cricket: cricket,
+  NBA: nba,
+  NHL: nhl,
   Sports: sports,
-  'Pop Culture & Sex Ed': popCultureSexEd,
+  'Pop Culture': popCulture,
+  'Canadian History': canadianHistory,
   'World Politics': worldPolitics,
-  Tech: tech,
+  FinTech: fintech,
 };
 
 /* ──────────────────────────────────────────────
@@ -208,8 +215,8 @@ export function getFactsForSubjectGrade(subject: Subject, grade: Grade): FactPac
   if (cached) return cached;
 
   let pool: FactPack[];
-  if (subject === 'Maths') {
-    pool = mathsFacts(grade);
+  if (subject === 'Stats & Maths') {
+    pool = statsAndMathsFacts(grade);
   } else {
     const seeds = SEED_MAP[subject]?.[grade];
     pool = seeds ? expandSeeds(seeds) : [];

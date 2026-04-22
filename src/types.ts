@@ -1,15 +1,16 @@
 export type Subject =
-  | 'Maths'
+  | 'Stats & Maths'
   | 'World History'
-  | 'Sub-continent History'
-  | 'Geography'
+  | 'World Geography'
   | 'World Religion & Mythology'
   | 'General Science'
-  | 'Cricket'
-  | 'Pop Culture & Sex Ed'
+  | 'NBA'
+  | 'NHL'
+  | 'Pop Culture'
+  | 'Canadian History'
   | 'Sports'
   | 'World Politics'
-  | 'Tech';
+  | 'FinTech';
 
 export type Grade = 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -30,8 +31,6 @@ export interface Player {
   /** Number of gifts earned from host milestones (every +20 total points). */
   giftsEarned: number;
   hasUsedUneesBees: boolean;
-  /** Londa poll: half points if correct; once per game per player */
-  hasUsedLondaPoll: boolean;
 }
 
 export interface Prize {
@@ -55,10 +54,6 @@ export interface GameState {
   usedQuestionIds: Set<string>;
   questionsAnsweredInSubject: number;
   hiddenOptions: string[];
-  uneesBeesActive: boolean;
-  uneesBeesSelections: string[];
-  /** Player who called Londa poll this question (½ points if they score correct) */
-  londaPollPlayerId: string | null;
   presentationMode: PresentationMode;
 }
 

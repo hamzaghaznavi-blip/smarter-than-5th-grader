@@ -1,4 +1,5 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Trophy,
   Trash2,
@@ -45,17 +46,18 @@ import {
 } from './gameSessionLog';
 
 const SUBJECTS: Subject[] = [
-  'Maths',
+  'Stats & Maths',
   'World History',
-  'Sub-continent History',
-  'Geography',
+  'World Geography',
   'World Religion & Mythology',
   'General Science',
-  'Cricket',
-  'Pop Culture & Sex Ed',
+  'NBA',
+  'NHL',
+  'Pop Culture',
+  'Canadian History',
   'Sports',
   'World Politics',
-  'Tech',
+  'FinTech',
 ];
 
 const GRADES: Grade[] = [1, 2, 3, 4, 5, 6];
@@ -185,37 +187,36 @@ const pickRandomQuestion = (
 const pointsForCorrect = (grade: Grade): number => grade;
 const CHOOSER_WRONG_PENALTY = -1;
 
-const pointsForCorrectWithLonda = (
-  grade: Grade,
-  playerId: string,
-  londaPollPlayerId: string | null,
-): number => {
-  const base = pointsForCorrect(grade);
-  if (playerId === londaPollPlayerId) return Math.round(base * 0.5 * 10) / 10;
-  return base;
-};
-
 const formatScore = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 
 type ScorePopup = { id: string; playerId: string; delta: number; timestamp: number };
 type GiftNotice = { id: string; text: string; timestamp: number };
 
 const SUBJECT_ICONS: Record<string, string> = {
-  'Maths': '🔢',
+  'Stats & Maths': '📊',
   'World History': '🏛️',
-  'Sub-continent History': '🕌',
-  'Geography': '🌍',
+  'World Geography': '🌍',
   'World Religion & Mythology': '⛩️',
   'General Science': '🔬',
-  'Cricket': '🏏',
-  'Pop Culture & Sex Ed': '🎭',
+  'NBA': '🏀',
+  'NHL': '🏒',
+  'Pop Culture': '🎭',
+  'Canadian History': '🍁',
   'Sports': '⚽',
   'World Politics': '🏛️',
-  'Tech': '💻',
+  'FinTech': '💳',
 };
 
 /* ─── Timer Ring Component ─── */
-const TimerRing = memo(function TimerRing({ timeLeft, total = TIMER_SECONDS_RELAXED }: { timeLeft: number; total?: number }) {
+const TimerRing = memo(function TimerRing({
+  timeLeft,
+  total = TIMER_SECONDS_RELAXED,
+  variant = 'light',
+}: {
+  timeLeft: number;
+  total?: number;
+  variant?: 'dark' | 'light';
+}) {
   const radius = 28;
   const circumference = 2 * Math.PI * radius;
   const progress = Math.min(1, Math.max(0, timeLeft / total));
@@ -224,30 +225,33 @@ const TimerRing = memo(function TimerRing({ timeLeft, total = TIMER_SECONDS_RELA
   const warnAt = Math.max(criticalAt + 1, Math.ceil(total * 0.5));
   const isCritical = timeLeft <= criticalAt && timeLeft > 0;
   const isWarn = timeLeft <= warnAt && timeLeft > criticalAt;
+  const trackStroke = variant === 'light' ? 'rgba(15, 23, 42, 0.12)' : 'rgba(255,255,255,0.1)';
 
   return (
-    <div className={cn('relative flex items-center justify-center', isCritical && 'timer-critical')}>
-      <svg width="72" height="72" viewBox="0 0 72 72" className="transform -rotate-90">
-        <circle
-          cx="36" cy="36" r={radius}
-          fill="none"
-          stroke="rgba(255,255,255,0.1)"
-          strokeWidth="4"
-        />
-        <circle
-          cx="36" cy="36" r={radius}
-          fill="none"
-          stroke={isCritical ? '#EF4444' : isWarn ? '#F59E0B' : '#00FF88'}
-          strokeWidth="4"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={dashOffset}
-          className="timer-ring"
-        />
+    <div className="relative flex items-center justify-center">
+      <svg width="72" height="72" viewBox="0 0 72 72">
+        <g transform="rotate(-90 36 36)">
+          <circle
+            cx="36" cy="36" r={radius}
+            fill="none"
+            stroke={trackStroke}
+            strokeWidth="4"
+          />
+          <circle
+            cx="36" cy="36" r={radius}
+            fill="none"
+            stroke={isCritical ? '#EF4444' : isWarn ? '#F59E0B' : '#00FF88'}
+            strokeWidth="4"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={dashOffset}
+            className="timer-ring"
+          />
+        </g>
       </svg>
       <span className={cn(
         'absolute text-xl font-black font-mono',
-        isCritical ? 'text-red-400' : isWarn ? 'text-amber-glow' : 'text-white',
+        isCritical ? 'text-red-600' : isWarn ? (variant === 'light' ? 'text-amber-700' : 'text-amber-glow') : variant === 'light' ? 'text-slate-900' : 'text-white',
       )}>
         {timeLeft}
       </span>
@@ -275,19 +279,19 @@ const Leaderboard = memo(function Leaderboard({
         <div
           key={p.id}
           className={cn(
-            'flex items-center gap-3 px-4 py-3 rounded-xl border transition-all',
-            i === 0 ? 'bg-gradient-to-r from-amber-500/10 to-yellow-500/10 border-amber-500/30' :
-            i === 1 ? 'bg-gradient-to-r from-slate-300/10 to-gray-300/10 border-slate-400/20' :
-            i === 2 ? 'bg-gradient-to-r from-orange-600/10 to-amber-700/10 border-orange-500/20' :
-            'bg-white/5 border-white/10',
+            'flex items-center gap-3 px-4 py-3 rounded-xl border transition-all shadow-sm',
+            i === 0 ? 'bg-amber-50 border-amber-300' :
+            i === 1 ? 'bg-slate-100 border-slate-300' :
+            i === 2 ? 'bg-orange-50 border-orange-200' :
+            'bg-white border-slate-200',
           )}
         >
           <span className="text-2xl w-8 text-center">{medals[i] ?? `${i + 1}.`}</span>
-          <span className="flex-1 font-black text-lg uppercase tracking-tight text-white">{p.name}</span>
+          <span className="flex-1 font-black text-lg uppercase tracking-tight text-slate-900">{p.name}</span>
           <div className="text-right">
-            <span className="text-xl font-black font-mono text-neon-green">{formatScore(p.totalScore)}</span>
+            <span className="text-xl font-black font-mono text-emerald-700 tabular-nums">{formatScore(p.totalScore)}</span>
             {showSubjectScore && (
-              <span className="block text-xs font-mono text-white/50">round: {formatScore(p.subjectScore)}</span>
+              <span className="block text-xs font-mono text-slate-500">round: {formatScore(p.subjectScore)}</span>
             )}
           </div>
         </div>
@@ -299,10 +303,10 @@ const Leaderboard = memo(function Leaderboard({
 /* ─── Score Popup Float ─── */
 const ScoreFloat = memo(function ScoreFloat({ popup }: { popup: ScorePopup }) {
   return (
-    <div className="score-popup fixed top-1/3 left-1/2 -translate-x-1/2 z-[100]">
+    <div className="score-popup fixed top-1/3 left-1/2 z-[100] -translate-x-1/2">
       <span className={cn(
-        'text-5xl font-display',
-        popup.delta > 0 ? 'text-neon-green' : 'text-red-400',
+        'text-5xl font-display drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)]',
+        popup.delta > 0 ? 'text-emerald-600' : 'text-red-600',
       )}>
         {popup.delta > 0 ? `+${formatScore(popup.delta)}` : formatScore(popup.delta)}
       </span>
@@ -311,19 +315,30 @@ const ScoreFloat = memo(function ScoreFloat({ popup }: { popup: ScorePopup }) {
 });
 
 /* ─── Progress Dots ─── */
-const ProgressDots = memo(function ProgressDots({ current, total }: { current: number; total: number }) {
+const ProgressDots = memo(function ProgressDots({
+  current,
+  total,
+  variant = 'light',
+}: {
+  current: number;
+  total: number;
+  variant?: 'dark' | 'light';
+}) {
   return (
     <div className="flex items-center gap-2">
       {Array.from({ length: total }, (_, i) => (
         <div
           key={i}
           className={cn(
-            'w-3 h-3 rounded-full transition-all duration-300',
-            i < current ? 'bg-neon-green scale-100' : 'bg-white/20 scale-75',
+            'h-3 w-3 rounded-full transition-[background-color,transform] duration-300',
+            i < current ? 'scale-100 bg-neon-green' : variant === 'light' ? 'scale-75 bg-slate-300' : 'scale-75 bg-[#4b5563]',
           )}
         />
       ))}
-      <span className="text-xs font-mono text-white/75 ml-2">{current}/{total}</span>
+      <span className={cn(
+        'ml-2 font-mono text-xs font-semibold',
+        variant === 'light' ? 'text-slate-600' : 'text-[#c4cad6]',
+      )}>{current}/{total}</span>
     </div>
   );
 });
@@ -341,9 +356,6 @@ export default function SmarterThan5thGraderApp() {
     usedQuestionIds: new Set<string>(),
     questionsAnsweredInSubject: 0,
     hiddenOptions: [],
-    uneesBeesActive: false,
-    uneesBeesSelections: [],
-    londaPollPlayerId: null,
     presentationMode: ENABLE_INFORMAL_MODE ? readInitialPresentationMode() : 'formal',
   }));
 
@@ -499,7 +511,6 @@ export default function SmarterThan5thGraderApp() {
         subjectScore: 0,
         giftsEarned: 0,
         hasUsedUneesBees: false,
-        hasUsedLondaPoll: false,
       };
       setGameState((prev) => ({ ...prev, players: [...prev.players, newPlayer] }));
       setNewPlayerName('');
@@ -519,15 +530,13 @@ export default function SmarterThan5thGraderApp() {
         gamePhase: 'QUESTION',
         usedQuestionIds: new Set(prev.usedQuestionIds).add(q.id),
         hiddenOptions: [],
-        uneesBeesActive: false,
-        uneesBeesSelections: [],
-        londaPollPlayerId: null,
       };
     });
     setShowAnswer(false);
     resetQuestionUI();
     setTimeLeft(secondsForGrade(grade));
     setIsTimerRunning(true);
+    setHostPanelOpen(false);
   }, [gameState.currentSubject, resetQuestionUI]);
 
   const nextQuestionSameRound = useCallback(() => {
@@ -543,9 +552,7 @@ export default function SmarterThan5thGraderApp() {
         ...prev,
         currentQuestion: q,
         usedQuestionIds: new Set(prev.usedQuestionIds).add(q.id),
-        uneesBeesActive: false,
-        uneesBeesSelections: [],
-        londaPollPlayerId: null,
+        hiddenOptions: [],
       };
     });
     setShowAnswer(false);
@@ -568,9 +575,7 @@ export default function SmarterThan5thGraderApp() {
         ...prev,
         currentQuestion: q,
         usedQuestionIds: new Set(prev.usedQuestionIds).add(q.id),
-        uneesBeesActive: false,
-        uneesBeesSelections: [],
-        londaPollPlayerId: null,
+        hiddenOptions: [],
       };
     });
     setShowAnswer(false);
@@ -583,7 +588,7 @@ export default function SmarterThan5thGraderApp() {
   const handleScore = useCallback((playerId: string, isCorrect: boolean) => {
     const grade = gameState.currentGrade ?? 1;
     const isCategoryChooser = playerId === gameState.categoryChooserId;
-    const pts = pointsForCorrectWithLonda(grade, playerId, gameState.londaPollPlayerId);
+    const pts = pointsForCorrect(grade);
 
     if (isCorrect) {
       fireConfetti({ particleCount: 42, spread: 58, origin: { y: 0.6 }, colors: ['#00FF88', '#3B82F6', '#F59E0B'] });
@@ -606,8 +611,7 @@ export default function SmarterThan5thGraderApp() {
     const prevTotal = gameState.players.find((p) => p.id === playerId)?.totalScore ?? 0;
     let scoreChange = 0;
     if (isCorrect) {
-      const londaNote = playerId === gameState.londaPollPlayerId ? ' [Londa ½]' : '';
-      logScoreEvent(`${playerName}: CORRECT (+${pts}) [grade ${grade}]${londaNote}`);
+      logScoreEvent(`${playerName}: CORRECT (+${pts}) [grade ${grade}]`);
       scoreChange = pts;
     } else if (isCategoryChooser) {
       logScoreEvent(`${playerName}: WRONG (${CHOOSER_WRONG_PENALTY}) [chooser]`);
@@ -653,8 +657,7 @@ export default function SmarterThan5thGraderApp() {
           players: newPlayers,
           gamePhase: 'SUBJECT_RESULTS',
           questionsAnsweredInSubject: nextQuestionsAnswered,
-          uneesBeesActive: false,
-          londaPollPlayerId: null,
+          hiddenOptions: [],
         };
       }
 
@@ -664,8 +667,7 @@ export default function SmarterThan5thGraderApp() {
         gamePhase: 'GRADE_SELECTION',
         questionsAnsweredInSubject: nextQuestionsAnswered,
         currentQuestion: null,
-        uneesBeesActive: false,
-        londaPollPlayerId: null,
+        hiddenOptions: [],
       };
     });
     setShowAnswer(false);
@@ -673,7 +675,6 @@ export default function SmarterThan5thGraderApp() {
   }, [
     gameState.currentGrade,
     gameState.categoryChooserId,
-    gameState.londaPollPlayerId,
     gameState.players,
     gameState.presentationMode,
     logScoreEvent,
@@ -683,39 +684,21 @@ export default function SmarterThan5thGraderApp() {
   ]);
 
   const activateUneesBees = useCallback((playerId: string) => {
-    if (!gameState.currentQuestion) return;
+    const q = gameState.currentQuestion;
+    if (!q) return;
     const p = gameState.players.find((x) => x.id === playerId);
     if (!p || p.hasUsedUneesBees === true) return;
+
+    const wrong = q.options.filter((opt) => opt !== q.answer);
+    const shuffled = [...wrong].sort(() => Math.random() - 0.5);
+    const toHide = shuffled.slice(0, 2);
+
     setGameState((prev) => ({
       ...prev,
-      players: prev.players.map((p) => (p.id === playerId ? { ...p, hasUsedUneesBees: true } : p)),
-      uneesBeesActive: true,
-      uneesBeesSelections: [],
+      players: prev.players.map((pl) => (pl.id === playerId ? { ...pl, hasUsedUneesBees: true } : pl)),
+      hiddenOptions: toHide,
     }));
   }, [gameState.currentQuestion, gameState.players]);
-
-  const toggleUneesBeesSelection = useCallback((option: string) => {
-    setGameState((prev) => {
-      const isSelected = prev.uneesBeesSelections.includes(option);
-      if (isSelected) return { ...prev, uneesBeesSelections: prev.uneesBeesSelections.filter((o) => o !== option) };
-      if (prev.uneesBeesSelections.length < 2) return { ...prev, uneesBeesSelections: [...prev.uneesBeesSelections, option] };
-      return prev;
-    });
-  }, []);
-
-  const activateLondaPoll = useCallback((playerId: string) => {
-    if (!gameState.currentQuestion) return;
-    const p = gameState.players.find((x) => x.id === playerId);
-    if (!p || p.hasUsedLondaPoll === true || gameState.londaPollPlayerId != null) return;
-    logScoreEvent(`Londa poll called by ${p.name} (½ pts if correct)`);
-    setGameState((prev) => ({
-      ...prev,
-      londaPollPlayerId: playerId,
-      players: prev.players.map((pl) =>
-        pl.id === playerId ? { ...pl, hasUsedLondaPoll: true } : pl,
-      ),
-    }));
-  }, [gameState.currentQuestion, gameState.players, gameState.londaPollPlayerId, logScoreEvent]);
 
   const resetGame = useCallback(() => {
     clearPersistedSession();
@@ -733,9 +716,6 @@ export default function SmarterThan5thGraderApp() {
       usedQuestionIds: new Set<string>(),
       questionsAnsweredInSubject: 0,
       hiddenOptions: [],
-      uneesBeesActive: false,
-      uneesBeesSelections: [],
-      londaPollPlayerId: null,
       presentationMode: 'formal',
     });
   }, []);
@@ -826,10 +806,9 @@ export default function SmarterThan5thGraderApp() {
   }, [gameState.gamePhase]);
 
   return (
-    <div className="min-h-screen bg-brutal-black text-gallery-white font-sans relative">
+    <div className="min-h-[100dvh] bg-slate-100 text-slate-900 font-sans relative">
       <WowAmbience mode={wowMode} />
 
-      {/* Score popups (plain DOM — no layout animation cost) */}
       {scorePopups.map((p) => (
         <ScoreFloat key={p.id} popup={p} />
       ))}
@@ -839,15 +818,15 @@ export default function SmarterThan5thGraderApp() {
           <div
             key={n.id}
             role="status"
-            className="fixed top-24 left-1/2 z-[92] w-[min(92vw,34rem)] -translate-x-1/2 px-5 py-4 rounded-2xl border border-amber-glow/35 bg-[#141008]/95 shadow-[0_8px_32px_rgba(0,0,0,0.45)]"
+            className="fixed top-24 left-1/2 z-[92] w-[min(92vw,34rem)] -translate-x-1/2 px-5 py-4 rounded-2xl border-2 border-amber-400 bg-white shadow-[0_8px_32px_rgba(0,0,0,0.12)]"
           >
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-glow/15 border border-amber-glow/25 flex items-center justify-center shrink-0">
-                <Gift className="w-5 h-5 text-amber-glow" aria-hidden />
+              <div className="w-10 h-10 rounded-xl bg-amber-100 border border-amber-300 flex items-center justify-center shrink-0">
+                <Gift className="w-5 h-5 text-amber-700" aria-hidden />
               </div>
               <div>
-                <p className="text-base sm:text-lg font-black text-white leading-snug">{n.text}</p>
-                <p className="text-[10px] font-mono text-white/35 mt-1 uppercase tracking-wider">Host gift milestone · every +20 points</p>
+                <p className="text-base sm:text-lg font-black text-slate-900 leading-snug">{n.text}</p>
+                <p className="text-[10px] font-mono text-slate-500 mt-1 uppercase tracking-wider">Host gift milestone · every +20 points</p>
               </div>
             </div>
           </div>
@@ -858,38 +837,38 @@ export default function SmarterThan5thGraderApp() {
           <div
             key={informalRoast}
             role="status"
-            className="fixed bottom-8 left-1/2 z-[95] w-[min(92vw,28rem)] -translate-x-1/2 px-5 py-4 rounded-2xl border border-hot-pink/40 bg-[#1a0f16]/95 shadow-[0_8px_32px_rgba(0,0,0,0.45)]"
+            className="fixed bottom-8 left-1/2 z-[95] w-[min(92vw,28rem)] -translate-x-1/2 px-5 py-4 rounded-2xl border-2 border-pink-400 bg-pink-50 shadow-[0_8px_32px_rgba(0,0,0,0.12)]"
           >
             <p className="flex items-start gap-3 text-left">
-              <Laugh className="w-6 h-6 text-hot-pink shrink-0 mt-0.5" aria-hidden />
-              <span className="text-lg sm:text-xl font-bold leading-snug text-white" dir="auto">
+              <Laugh className="w-6 h-6 text-pink-600 shrink-0 mt-0.5" aria-hidden />
+              <span className="text-lg sm:text-xl font-bold leading-snug text-slate-900" dir="auto">
                 {informalRoast}
               </span>
             </p>
-            <p className="text-[10px] font-mono text-white/40 mt-2 uppercase tracking-wider">Informal · grades 4–6</p>
+            <p className="text-[10px] font-mono text-slate-600 mt-2 uppercase tracking-wider">Informal · grades 4–6</p>
           </div>
         )}
 
       {/* Resume banner */}
       {resumeOffered && resumeSessionName && (
         <div
-          className="relative z-50 bg-amber-glow/10 border-b border-amber-glow/30 px-6 py-4 flex flex-wrap items-center justify-between gap-3 max-w-7xl mx-auto"
+          className="relative z-50 bg-amber-50 border-b border-amber-300 px-6 py-4 flex flex-wrap items-center justify-between gap-3 max-w-7xl mx-auto"
         >
-          <p className="font-mono text-sm font-bold text-amber-glow">
+          <p className="font-mono text-sm font-bold text-amber-900">
             Recover previous game &quot;{resumeSessionName}&quot;?
           </p>
           <div className="flex gap-2">
             <button
               type="button"
               onClick={resumeSession}
-              className="px-5 py-2 bg-amber-glow text-brutal-black font-mono text-xs font-bold uppercase rounded-lg hover:brightness-110 transition-all"
+              className="px-5 py-2 bg-amber-500 text-white font-mono text-xs font-bold uppercase rounded-lg hover:bg-amber-600 transition-all"
             >
               Resume
             </button>
             <button
               type="button"
               onClick={dismissResume}
-              className="px-5 py-2 bg-white/10 text-white font-mono text-xs font-bold uppercase rounded-lg border border-white/20 hover:bg-white/20 transition-all"
+              className="px-5 py-2 bg-white text-slate-700 font-mono text-xs font-bold uppercase rounded-lg border border-slate-300 hover:bg-slate-50 transition-all"
             >
               Start fresh
             </button>
@@ -898,27 +877,27 @@ export default function SmarterThan5thGraderApp() {
       )}
 
       {/* ── Header ── */}
-      <header className="relative z-40 border-b border-white/10 bg-[#0a0a0f]/95 sticky top-0">
+      <header className="sticky top-0 z-50 border-b border-slate-200 bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <div className="relative">
-              <div className="border border-white/15 bg-white/[0.06] p-3 rounded-xl">
-                <Trophy className="w-7 h-7 text-neon-green" />
+              <div className="border border-slate-200 bg-slate-50 p-3 rounded-xl">
+                <Trophy className="w-7 h-7 text-emerald-600" />
               </div>
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-neon-green rounded-full opacity-90" />
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full ring-2 ring-white" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-display uppercase leading-none tracking-tight text-white">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-display uppercase leading-none tracking-tight text-slate-900">
                 Class Room Trivia Game
               </h1>
-              <p className="text-[10px] sm:text-xs font-mono uppercase tracking-widest text-white/45 font-bold mt-1">
+              <p className="text-[10px] sm:text-xs font-mono uppercase tracking-widest text-slate-500 font-bold mt-1">
                 Smarter Than a 5th Grader
               </p>
-              <p className="text-[10px] sm:text-xs font-mono uppercase tracking-widest text-neon-green/90 font-bold mt-0.5">
+              <p className="text-[10px] sm:text-xs font-mono uppercase tracking-widest text-emerald-700 font-bold mt-0.5">
                 {ENABLE_INFORMAL_MODE && gameState.presentationMode === 'informal' ? (
-                  <span className="text-hot-pink">Informal · buzzer + voice roasts (G4–6)</span>
+                  <span className="text-pink-600">Informal · buzzer + voice roasts (G4–6)</span>
                 ) : (
-                  <span className="text-neon-green/90">Formal · silent scoring · executive mode</span>
+                  <span>Formal · silent scoring · executive mode</span>
                 )}
               </p>
             </div>
@@ -932,8 +911,8 @@ export default function SmarterThan5thGraderApp() {
                 className={cn(
                   'flex items-center gap-2 px-3 py-2 font-mono font-bold uppercase text-xs rounded-xl border transition-all',
                   hostPanelOpen
-                    ? 'bg-electric-blue text-white border-electric-blue'
-                    : 'bg-white/5 text-white/80 border-white/15 hover:bg-white/10',
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-slate-100 text-slate-800 border-slate-300 hover:bg-slate-200',
                 )}
               >
                 <Settings2 className="w-4 h-4" />
@@ -943,7 +922,7 @@ export default function SmarterThan5thGraderApp() {
                 <button
                   type="button"
                   onClick={exportSessionLog}
-                  className="px-3 py-2 bg-white/5 border border-white/15 text-white/80 font-mono font-bold uppercase text-xs rounded-xl hover:bg-white/10 transition-all"
+                  className="px-3 py-2 bg-slate-100 border border-slate-300 text-slate-800 font-mono font-bold uppercase text-xs rounded-xl hover:bg-slate-200 transition-all"
                 >
                   Export
                 </button>
@@ -951,14 +930,14 @@ export default function SmarterThan5thGraderApp() {
               <button
                 type="button"
                 onClick={endGame}
-                className="flex items-center gap-2 px-3 py-2 bg-red-500/15 border border-red-500/30 text-red-400 font-mono font-bold uppercase text-xs rounded-xl hover:bg-red-500/25 transition-all"
+                className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-300 text-red-700 font-mono font-bold uppercase text-xs rounded-xl hover:bg-red-100 transition-all"
               >
                 <Flag className="w-4 h-4" />
                 <span className="hidden sm:inline">End</span>
               </button>
               <button
                 onClick={resetGame}
-                className="flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/15 text-white/80 font-mono font-bold uppercase text-xs rounded-xl hover:bg-white/10 transition-all"
+                className="flex items-center gap-2 px-3 py-2 bg-slate-100 border border-slate-300 text-slate-800 font-mono font-bold uppercase text-xs rounded-xl hover:bg-slate-200 transition-all"
               >
                 <Home className="w-4 h-4" />
               </button>
@@ -966,23 +945,27 @@ export default function SmarterThan5thGraderApp() {
           )}
         </div>
 
-        {/* Live scoreboard strip */}
+        {/* Live scoreboard strip — always light, large totals */}
         {gameState.gamePhase !== 'SETUP' && gameState.players.length > 0 && (
-          <div className="max-w-7xl mx-auto px-6 pb-3">
+          <div className="max-w-7xl mx-auto px-6 pb-3 pt-2 border-t border-slate-100 bg-slate-50">
             <div className="flex flex-wrap gap-2">
               {sortedPlayers.map((p, i) => (
                 <span
                   key={p.id}
                   className={cn(
-                    'inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-mono font-bold border transition-all',
-                    i === 0 ? 'bg-amber-glow/10 border-amber-glow/30 text-amber-glow' :
-                    'bg-white/5 border-white/10 text-white/70',
+                    'inline-flex items-center gap-2 rounded-lg font-mono border shadow-sm px-4 py-2.5 text-sm sm:text-base font-black',
+                    i === 0
+                      ? 'bg-amber-100 border-amber-400 text-amber-950'
+                      : 'bg-white border-slate-300 text-slate-900',
                   )}
                 >
-                  {i === 0 && <Crown className="w-3 h-3" />}
-                  {p.name}: <span className="text-neon-green">{formatScore(p.totalScore)}</span>
+                  {i === 0 && <Crown className="shrink-0 w-4 h-4 text-amber-800" />}
+                  <span className="uppercase tracking-tight">{p.name}</span>
+                  <span className="tabular-nums text-emerald-700 text-lg sm:text-xl font-black">
+                    {formatScore(p.totalScore)}
+                  </span>
                   {p.giftsEarned > 0 && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-glow/10 border border-amber-glow/25 text-amber-glow/90">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-xs font-bold bg-amber-50 border-amber-300 text-amber-900">
                       <Gift className="w-3 h-3" aria-hidden />
                       {p.giftsEarned}
                     </span>
@@ -995,7 +978,12 @@ export default function SmarterThan5thGraderApp() {
       </header>
 
       {/* ── Main ── */}
-      <main className="relative z-10 max-w-6xl mx-auto px-6 py-12 sm:py-16">
+      <main
+        className={cn(
+          'relative z-10 mx-auto min-h-[100dvh] w-full max-w-6xl bg-transparent px-6 py-12 sm:py-16',
+          hostPanelOpen && 'pb-[min(60vh,28rem)]',
+        )}
+      >
         {/* ── SETUP ── */}
           {gameState.gamePhase === 'SETUP' && (
             <div
@@ -1009,30 +997,29 @@ export default function SmarterThan5thGraderApp() {
                   >
                     <span className="text-gradient">READY TO PLAY</span>
                   </h2>
-                  <p className="text-white/55 font-mono text-sm mt-5 max-w-lg leading-relaxed">
+                  <p className="text-slate-600 font-mono text-sm mt-5 max-w-lg leading-relaxed">
                     Add players, pick Formal or Informal, and run a fast-paced live quiz.
                     Grade 1 = 1pt → Grade 6 = 6pts. Sharp timers. Built for the big screen.
                   </p>
                 </div>
                 <div
-                  className="flex items-center gap-4 p-4 rounded-xl bg-neon-green/5 border border-neon-green/20"
+                  className="flex items-center gap-4 p-4 rounded-xl bg-emerald-50 border border-emerald-200"
                 >
-                  <Zap className="w-5 h-5 text-neon-green flex-shrink-0" />
-                  <p className="font-mono text-xs font-bold text-neon-green/80 uppercase">
+                  <Zap className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+                  <p className="font-mono text-xs font-bold text-emerald-900 uppercase">
                     11 subjects · 6 grades · 2 lifelines · 5,000+ questions · rapid rounds
                   </p>
                 </div>
                 <div
-                  className="text-xs font-mono text-white/40 space-y-1"
+                  className="text-xs font-mono text-slate-500 space-y-1"
                 >
-                  <p>Lounda poll: ask the room, ½ pts for caller (once/game).</p>
-                  <p>Unees Bees: contestant picks two answers (once/game).</p>
+                  <p>50/50: contestant picks two answers (once/game).</p>
                   <p>Chooser wrong: −1 pt. Others wrong: 0 pts.</p>
                 </div>
               </div>
 
               <div
-                className="bg-[#0c0e14] border border-white/10 rounded-3xl p-8 sm:p-10 space-y-8 shadow-2xl shadow-black/40 ring-1 ring-white/[0.06]"
+                className="bg-white border border-slate-200 rounded-3xl p-8 sm:p-10 space-y-8 shadow-xl shadow-slate-200/50 ring-1 ring-slate-100"
               >
                 <div className="flex gap-3">
                   <input
@@ -1041,11 +1028,11 @@ export default function SmarterThan5thGraderApp() {
                     onChange={(e) => setNewPlayerName(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && addPlayer()}
                     placeholder="Player name..."
-                    className="flex-1 bg-white/5 border border-white/15 rounded-xl px-5 py-4 text-xl font-black text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-electric-blue/50 focus:border-electric-blue/50 transition-all"
+                    className="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-5 py-4 text-xl font-black text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all"
                   />
                   <button
                     onClick={addPlayer}
-                    className="bg-electric-blue text-white px-6 py-4 text-lg font-black uppercase rounded-xl hover:brightness-110 active:scale-95 transition-all"
+                    className="bg-blue-600 text-white px-6 py-4 text-lg font-black uppercase rounded-xl hover:bg-blue-700 active:scale-95 transition-all"
                   >
                     <Plus className="w-6 h-6" />
                   </button>
@@ -1055,19 +1042,19 @@ export default function SmarterThan5thGraderApp() {
                   {gameState.players.map((player, idx) => (
                       <div
                         key={player.id}
-                        className="flex items-center justify-between bg-white/5 border border-white/10 rounded-xl px-5 py-4 group hover:bg-white/8 transition-all"
+                        className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-5 py-4 group hover:bg-slate-100 transition-all"
                       >
                         <div className="flex items-center gap-3">
-                          <span className="w-8 h-8 flex items-center justify-center rounded-lg bg-gradient-to-br from-electric-blue to-deep-purple text-white text-sm font-black">
+                          <span className="w-8 h-8 flex items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-violet-600 text-white text-sm font-black">
                             {idx + 1}
                           </span>
-                          <span className="text-xl font-black uppercase tracking-tight">{player.name}</span>
+                          <span className="text-xl font-black uppercase tracking-tight text-slate-900">{player.name}</span>
                         </div>
                         <button
                           onClick={() =>
                             setGameState((prev) => ({ ...prev, players: prev.players.filter((p) => p.id !== player.id) }))
                           }
-                          className="text-white/30 hover:text-red-400 transition-colors"
+                          className="text-slate-400 hover:text-red-600 transition-colors"
                         >
                           <Trash2 className="w-5 h-5" />
                         </button>
@@ -1078,7 +1065,7 @@ export default function SmarterThan5thGraderApp() {
                 {ENABLE_INFORMAL_MODE && (
                   <>
                     <div className="space-y-3">
-                      <p className="text-xs font-mono font-bold uppercase text-white/40 tracking-wider">Mode</p>
+                      <p className="text-xs font-mono font-bold uppercase text-slate-500 tracking-wider">Mode</p>
                       <div className="grid grid-cols-2 gap-3">
                         <button
                           type="button"
@@ -1086,8 +1073,8 @@ export default function SmarterThan5thGraderApp() {
                           className={cn(
                             'py-4 px-4 rounded-xl border-2 font-mono text-xs font-bold uppercase transition-all',
                             gameState.presentationMode === 'formal'
-                              ? 'border-neon-green bg-neon-green/10 text-neon-green'
-                              : 'border-white/15 bg-white/5 text-white/50 hover:border-white/25',
+                              ? 'border-emerald-500 bg-emerald-50 text-emerald-800'
+                              : 'border-slate-200 bg-slate-50 text-slate-500 hover:border-slate-300',
                           )}
                         >
                           Formal
@@ -1098,32 +1085,32 @@ export default function SmarterThan5thGraderApp() {
                           className={cn(
                             'py-4 px-4 rounded-xl border-2 font-mono text-xs font-bold uppercase transition-all flex items-center justify-center gap-2',
                             gameState.presentationMode === 'informal'
-                              ? 'border-hot-pink bg-hot-pink/10 text-hot-pink'
-                              : 'border-white/15 bg-white/5 text-white/50 hover:border-white/25',
+                              ? 'border-pink-500 bg-pink-50 text-pink-800'
+                              : 'border-slate-200 bg-slate-50 text-slate-500 hover:border-slate-300',
                           )}
                         >
                           <Laugh className="w-4 h-4" />
                           Informal
                         </button>
                       </div>
-                      <p className="text-[11px] font-mono text-white/35 leading-relaxed">
+                      <p className="text-[11px] font-mono text-slate-500 leading-relaxed">
                         Informal: loud buzzer + spoken roasts (Urdu male / Punjabi female mix, browser voices).
                         Grades 4–6. Formal: no sound.
                       </p>
                     </div>
 
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 space-y-3">
-                      <div className="flex items-center gap-2 text-[10px] font-mono font-bold uppercase tracking-wider text-white/45">
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 space-y-3">
+                      <div className="flex items-center gap-2 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-600">
                         <Link2 className="w-3.5 h-3.5" />
                         Direct links (bookmark or share)
                       </div>
-                      <div className="space-y-1.5 text-[10px] font-mono text-white/30 break-all leading-snug">
+                      <div className="space-y-1.5 text-[10px] font-mono text-slate-600 break-all leading-snug">
                         <p>
-                          <span className="text-neon-green/55 font-bold uppercase mr-1.5">Formal</span>
+                          <span className="text-emerald-700 font-bold uppercase mr-1.5">Formal</span>
                           {shareUrlForMode('formal')}
                         </p>
                         <p>
-                          <span className="text-hot-pink/55 font-bold uppercase mr-1.5">Informal</span>
+                          <span className="text-pink-700 font-bold uppercase mr-1.5">Informal</span>
                           {shareUrlForMode('informal')}
                         </p>
                       </div>
@@ -1167,10 +1154,10 @@ export default function SmarterThan5thGraderApp() {
               className="space-y-12"
             >
               <div className="text-center">
-                <h2 className="text-6xl sm:text-8xl font-display uppercase tracking-tighter">
-                  Who's <span className="text-gradient-warm">Choosing</span>?
+                <h2 className="text-6xl sm:text-8xl font-display uppercase tracking-tighter text-slate-900">
+                  Who&apos;s <span className="text-gradient-warm">Choosing</span>?
                 </h2>
-                <p className="text-white/40 font-mono text-sm mt-3">Select the contestant who picks the subject</p>
+                <p className="text-slate-600 font-mono text-sm mt-3">Select the contestant who picks the subject</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
                 {gameState.players.map((player) => (
@@ -1183,13 +1170,13 @@ export default function SmarterThan5thGraderApp() {
                         gamePhase: 'GRADE_SELECTION',
                       }))
                     }
-                    className="group p-8 bg-white/[0.03] border border-white/10 rounded-2xl text-center hover:bg-white/8 hover:border-electric-blue/40 active:scale-95 transition-all"
+                    className="group p-8 bg-white border border-slate-200 rounded-2xl text-center hover:border-blue-400 hover:shadow-lg active:scale-95 transition-all shadow-sm"
                   >
-                    <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-electric-blue to-deep-purple flex items-center justify-center text-2xl font-display text-white group-hover:scale-110 transition-transform">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center text-2xl font-display text-white group-hover:scale-110 transition-transform">
                       {player.name[0]}
                     </div>
-                    <span className="text-2xl font-display uppercase">{player.name}</span>
-                    <p className="text-xs font-mono text-white/40 mt-2">{formatScore(player.totalScore)} pts</p>
+                    <span className="text-2xl font-display uppercase text-slate-900">{player.name}</span>
+                    <p className="text-xs font-mono text-emerald-700 font-bold mt-2">{formatScore(player.totalScore)} pts</p>
                   </button>
                 ))}
               </div>
@@ -1204,10 +1191,10 @@ export default function SmarterThan5thGraderApp() {
             >
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
                 <div>
-                  <p className="text-xs font-mono uppercase text-electric-blue/80 tracking-widest mb-1">
+                  <p className="text-xs font-mono uppercase text-blue-700 tracking-widest mb-1">
                     {chooserName} is choosing · Q{gameState.questionsAnsweredInSubject + 1}/{QUESTIONS_PER_SUBJECT}
                   </p>
-                  <h2 className="text-5xl sm:text-7xl font-display uppercase tracking-tighter">
+                  <h2 className="text-5xl sm:text-7xl font-display uppercase tracking-tighter text-slate-900">
                     Pick the <span className="text-gradient">Battle</span>
                   </h2>
                 </div>
@@ -1220,10 +1207,10 @@ export default function SmarterThan5thGraderApp() {
                     key={subject}
                     onClick={() => setGameState((prev) => ({ ...prev, currentSubject: subject }))}
                     className={cn(
-                      'p-4 rounded-xl border text-left font-black uppercase text-sm transition-all active:scale-95',
+                      'p-4 rounded-xl border text-left font-black uppercase text-sm transition-all active:scale-95 shadow-sm',
                       gameState.currentSubject === subject
-                        ? 'bg-electric-blue/15 border-electric-blue/50 text-electric-blue ring-1 ring-electric-blue/30'
-                        : 'bg-white/[0.03] border-white/10 text-white/70 hover:bg-white/5 hover:border-white/20',
+                        ? 'bg-blue-100 border-blue-500 text-blue-900 ring-2 ring-blue-300'
+                        : 'bg-white border-slate-200 text-slate-800 hover:bg-slate-50 hover:border-slate-300',
                     )}
                   >
                     <span className="text-lg mr-2">{SUBJECT_ICONS[subject] ?? '📚'}</span>
@@ -1241,16 +1228,19 @@ export default function SmarterThan5thGraderApp() {
                       key={grade}
                       onClick={() => selectGrade(grade)}
                       className={cn(
-                        'relative overflow-hidden min-h-28 rounded-2xl border-2 flex flex-col items-center justify-center gap-1 transition-all active:scale-95 group',
+                        'relative overflow-hidden min-h-28 rounded-2xl border-2 flex flex-col items-center justify-center gap-1 transition-all active:scale-95 group shadow-sm',
                         selectedGrade === grade
-                          ? 'bg-electric-blue border-electric-blue text-white'
-                          : 'bg-white/[0.03] border-white/15 hover:border-electric-blue/50 hover:bg-electric-blue/5',
+                          ? 'bg-blue-600 border-blue-600 text-white'
+                          : 'bg-white border-slate-200 text-slate-900 hover:border-blue-400 hover:bg-blue-50',
                       )}
                     >
                       <span className="text-5xl font-display leading-none group-hover:scale-110 transition-transform">
                         {grade}
                       </span>
-                      <span className="text-xs font-mono font-bold uppercase text-white/50">
+                      <span className={cn(
+                        'text-xs font-mono font-bold uppercase',
+                        selectedGrade === grade ? 'text-white/90' : 'text-slate-500',
+                      )}>
                         +{grade} pts
                       </span>
                     </button>
@@ -1260,69 +1250,66 @@ export default function SmarterThan5thGraderApp() {
             </div>
           )}
 
-          {/* ── QUESTION ── */}
+          {/* ── QUESTION — light panel + fixed scoring dock (portal) so names never scroll under compositor glitches */}
           {gameState.gamePhase === 'QUESTION' && gameState.currentQuestion && (
+            <Fragment key="q-phase">
             <div
-              key="q"
-              className="relative z-20 isolate space-y-8 pb-10"
+              className="relative space-y-8 rounded-2xl border border-slate-200 bg-white p-5 sm:p-8 pb-8 sm:pb-10 shadow-2xl shadow-black/20 ring-1 ring-slate-200/90 mb-[min(42vh,20rem)]"
             >
-              {/* Question header */}
-              <div className="relative flex justify-between items-center">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
                 <div>
-                  <p className="text-xs font-mono uppercase text-white/75 tracking-widest">
+                  <p className="text-xs font-mono uppercase tracking-widest text-slate-600">
                     {gameState.currentSubject} · Grade {gameState.currentGrade} · +{formatScore(pointsForCorrect(gameState.currentGrade ?? 1))} pts
-                    {gameState.londaPollPlayerId &&
-                      ` · Lounda: ${gameState.players.find((x) => x.id === gameState.londaPollPlayerId)?.name ?? '?'} (½)`}
                   </p>
-                  <ProgressDots current={gameState.questionsAnsweredInSubject} total={QUESTIONS_PER_SUBJECT} />
+                  <ProgressDots variant="light" current={gameState.questionsAnsweredInSubject} total={QUESTIONS_PER_SUBJECT} />
                 </div>
                 <div className="flex items-center gap-3">
                   {(gameState.currentGrade ?? 1) >= 4 && (
-                    <span className="hidden sm:inline font-mono text-[10px] font-black uppercase tracking-[0.2em] text-amber-glow/90 border border-amber-glow/35 px-2 py-1 rounded-md bg-amber-glow/10">
+                    <span className="hidden sm:inline font-mono text-[10px] font-black uppercase tracking-[0.2em] text-amber-900 border border-amber-400 px-2 py-1 rounded-md bg-amber-100">
                       Rapid · {TIMER_SECONDS_RAPID}s
                     </span>
                   )}
                   <TimerRing
+                    variant="light"
                     timeLeft={timeLeft}
                     total={secondsForGrade(gameState.currentGrade ?? 1)}
                   />
                 </div>
               </div>
 
-              {/* Question card */}
-              <div className="relative rounded-3xl border border-white/15 bg-[#111820] shadow-md shadow-black/40 ring-1 ring-white/10 overflow-hidden">
-                <div className="absolute inset-0 opacity-30 bg-[radial-gradient(ellipse_100%_80%_at_50%_0%,rgba(59,130,246,0.08),transparent_55%)]" aria-hidden />
+              <div className="relative z-0 overflow-hidden rounded-3xl border border-slate-200 bg-slate-50 shadow-inner">
                 <div className="relative p-8 sm:p-12 lg:p-14">
-                <h3 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-display leading-[1.1] tracking-tight mb-10 text-white drop-shadow-[0_2px_18px_rgba(0,0,0,0.55)]">
+                <h3
+                  data-q-stem
+                  className="mb-10 font-display text-4xl leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl xl:text-7xl text-slate-900"
+                >
                   {gameState.currentQuestion.question}
                 </h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
                   {gameState.currentQuestion.options.map((option, idx) => {
                     const isCorrectOpt = option === gameState.currentQuestion!.answer;
-                    const uneesOn = gameState.uneesBeesActive;
+                    const isHidden = gameState.hiddenOptions.includes(option);
                     return (
                       <button
                         key={idx}
                         type="button"
+                        data-q-option={String(idx)}
+                        disabled={isHidden}
                         onClick={() => {
-                          if (uneesOn) toggleUneesBeesSelection(option);
-                          else setHostRevealAll(true);
+                          setHostRevealAll(true);
                         }}
                         className={cn(
-                          'p-5 rounded-2xl border text-xl sm:text-2xl font-bold text-left transition-all active:scale-[0.98]',
+                          'p-5 rounded-2xl border text-xl sm:text-2xl font-bold text-left transition-colors duration-150',
+                          isHidden && 'opacity-30 cursor-not-allowed',
                           hostRevealAll
                             ? isCorrectOpt
-                              ? 'bg-neon-green/20 text-neon-green border-neon-green/50 ring-2 ring-neon-green/30'
-                              : 'bg-red-500/10 text-red-300 border-red-500/30'
-                            : uneesOn
-                              ? gameState.uneesBeesSelections.includes(option)
-                                ? 'bg-neon-green/15 border-neon-green/40 text-neon-green'
-                                : 'bg-white/[0.03] border-white/10 text-white/75 hover:bg-white/5 hover:border-white/15'
-                              : 'bg-white/[0.03] border-white/10 text-white/85 hover:bg-white/5 hover:border-white/15',
+                              ? 'bg-emerald-100 text-emerald-900 border-emerald-500 ring-2 ring-emerald-300'
+                              : 'bg-red-50 text-red-800 border-red-300'
+                              : 'border border-slate-200 bg-white text-slate-900 hover:border-slate-300 hover:bg-slate-50',
                         )}
                       >
-                        <span className="text-electric-blue mr-3 font-mono text-base">{String.fromCharCode(65 + idx)}.</span>
+                        <span className="text-blue-600 mr-3 font-mono text-base font-black">{String.fromCharCode(65 + idx)}.</span>
                         {option}
                       </button>
                     );
@@ -1334,27 +1321,27 @@ export default function SmarterThan5thGraderApp() {
                   <button
                     type="button"
                     onClick={() => setHostRevealAll(true)}
-                    className="px-4 py-2 bg-white/10 text-white font-mono text-xs font-bold uppercase rounded-lg border border-white/15 hover:bg-white/15 transition-all"
+                    className="px-4 py-2 bg-slate-200 text-slate-900 font-mono text-xs font-bold uppercase rounded-lg border border-slate-300 hover:bg-slate-300 transition-all"
                   >
                     Reveal
                   </button>
                   <button
                     onClick={() => setShowAnswer(!showAnswer)}
-                    className="px-4 py-2 bg-electric-blue/20 text-electric-blue font-mono text-xs font-bold uppercase rounded-lg border border-electric-blue/30 hover:bg-electric-blue/30 transition-all"
+                    className="px-4 py-2 bg-blue-100 text-blue-900 font-mono text-xs font-bold uppercase rounded-lg border border-blue-300 hover:bg-blue-200 transition-all"
                   >
                     {showAnswer ? 'Hide' : 'Answer'}
                   </button>
                   <button
                     type="button"
                     onClick={nextQuestionSameRound}
-                    className="px-4 py-2 bg-white/5 border border-white/15 text-white/70 font-mono font-bold uppercase text-xs rounded-lg hover:bg-white/10 transition-all"
+                    className="px-4 py-2 bg-white border border-slate-300 font-mono font-bold uppercase text-xs text-slate-800 rounded-lg hover:bg-slate-50 transition-all"
                   >
                     Next Q
                   </button>
                   <button
                     type="button"
                     onClick={alternateQuestion}
-                    className="px-4 py-2 bg-amber-glow/10 text-amber-glow border border-amber-glow/30 font-mono font-bold uppercase text-xs rounded-lg hover:bg-amber-glow/20 transition-all"
+                    className="px-4 py-2 bg-amber-100 text-amber-950 border border-amber-400 font-mono font-bold uppercase text-xs rounded-lg hover:bg-amber-200 transition-all"
                   >
                     Alternate
                   </button>
@@ -1366,12 +1353,10 @@ export default function SmarterThan5thGraderApp() {
                         ...prev,
                         gamePhase: 'GRADE_SELECTION',
                         currentQuestion: null,
-                        uneesBeesActive: false,
-                        uneesBeesSelections: [],
-                        londaPollPlayerId: null,
+                        hiddenOptions: [],
                       }));
                     }}
-                    className="px-4 py-2 bg-white/5 border border-white/15 text-white/50 font-mono font-bold uppercase text-xs rounded-lg hover:bg-white/10 transition-all"
+                    className="px-4 py-2 bg-white border border-slate-300 font-mono font-bold uppercase text-xs text-slate-600 rounded-lg hover:bg-slate-50 transition-all"
                   >
                     Back
                   </button>
@@ -1379,9 +1364,9 @@ export default function SmarterThan5thGraderApp() {
 
                 {showAnswer && (
                   <div
-                    className="inline-block px-6 py-3 bg-neon-green/10 border border-neon-green/30 rounded-xl"
+                    className="inline-block px-6 py-3 bg-emerald-100 border border-emerald-400 rounded-xl"
                   >
-                    <span className="text-2xl sm:text-3xl font-display uppercase text-neon-green">
+                    <span className="text-2xl sm:text-3xl font-display uppercase text-emerald-900">
                       {gameState.currentQuestion.answer}
                     </span>
                   </div>
@@ -1389,21 +1374,21 @@ export default function SmarterThan5thGraderApp() {
                 </div>
               </div>
 
-              {/* Host: lifelines + scoring — high-contrast panel (readable on projector) */}
               <section
-                className="rounded-2xl border border-white/20 bg-[#141c28] p-6 sm:p-8 shadow-[0_8px_32px_rgba(0,0,0,0.45)] ring-1 ring-white/10"
+                className="relative rounded-2xl border border-slate-200 bg-slate-100 p-6 sm:p-8 shadow-sm"
                 aria-label="Host controls"
               >
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 pb-8 border-b border-white/15">
+                <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 pb-8 border-b border-slate-300">
                   <div>
                     <div className="flex items-center gap-2 mb-3">
-                      <Star className="w-5 h-5 text-amber-glow shrink-0" aria-hidden />
-                      <h2 className="text-sm font-bold uppercase tracking-wide text-white">
+                      <Star className="w-5 h-5 text-amber-600 shrink-0" aria-hidden />
+                      <h2 className="text-sm font-bold uppercase tracking-wide text-slate-900">
                         Lifelines
                       </h2>
                     </div>
-                    <p className="font-mono text-[11px] font-bold text-white/70 mb-3 uppercase tracking-wider">
-                      Unees Bees — pick two answers on screen (once per player)
+                    <p className="mb-3 font-mono text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                      50/50 — pick two answers on screen (once per player)
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {gameState.players.map((p) =>
@@ -1412,93 +1397,93 @@ export default function SmarterThan5thGraderApp() {
                             key={`unees-${p.id}`}
                             type="button"
                             onClick={() => activateUneesBees(p.id)}
-                            className="px-4 py-2 bg-white text-black border border-white font-mono text-xs font-bold uppercase rounded-lg hover:bg-white/90 transition-colors"
+                            className="px-4 py-2 bg-slate-900 text-white border border-slate-900 font-mono text-xs font-bold uppercase rounded-lg hover:bg-slate-800 transition-colors"
                           >
                             {p.name}
                           </button>
                         ) : null,
                       )}
                       {gameState.players.every((p) => p.hasUsedUneesBees === true) && (
-                        <p className="font-mono text-xs text-white/60">All used</p>
+                        <p className="font-mono text-xs text-slate-500">All used</p>
                       )}
                     </div>
-                  </div>
-
-                  <div>
-                    <p className="font-mono text-[11px] font-bold text-white/70 mb-3 uppercase tracking-wider">
-                      Lounda poll — ½ pts if correct (once per player)
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {gameState.players.map((p) => {
-                        const canUse =
-                          p.hasUsedLondaPoll !== true && gameState.londaPollPlayerId == null;
-                        if (!canUse) return null;
-                        return (
-                          <button
-                            key={`londa-${p.id}`}
-                            type="button"
-                            onClick={() => activateLondaPoll(p.id)}
-                            className="px-4 py-2 bg-violet-500/25 text-violet-100 border border-violet-400/50 font-mono text-xs font-bold uppercase rounded-lg hover:bg-violet-500/35 transition-colors"
-                          >
-                            {p.name}
-                          </button>
-                        );
-                      })}
-                      {gameState.londaPollPlayerId != null && (
-                        <p className="font-mono text-sm font-bold text-violet-200 w-full">
-                          Active: {gameState.players.find((x) => x.id === gameState.londaPollPlayerId)?.name ?? '?'}
-                        </p>
-                      )}
-                      {gameState.players.every((p) => p.hasUsedLondaPoll === true) &&
-                        gameState.londaPollPlayerId == null && (
-                          <p className="font-mono text-xs text-white/60">All used</p>
-                        )}
-                    </div>
+                    {gameState.hiddenOptions.length > 0 && (
+                      <p className="mt-3 font-mono text-xs text-emerald-800 font-bold">
+                        Active: two wrong answers hidden
+                      </p>
+                    )}
                   </div>
                 </div>
 
-                <div className="mb-4">
-                  <h2 className="text-base font-bold uppercase tracking-wide text-white">
-                    Tap who got it right
-                  </h2>
-                  <p className="text-xs font-mono text-white/65 mt-1">
-                    Chooser-only wrong button applies −1 to the category picker.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {gameState.players.map((player) => (
-                    <div key={player.id} className="space-y-2">
-                      <button
-                        type="button"
-                        onClick={() => handleScore(player.id, true)}
-                        className={cn(
-                          'w-full p-5 rounded-xl border-2 text-lg font-black uppercase transition-colors active:scale-[0.99]',
-                          player.id === gameState.categoryChooserId
-                            ? 'bg-sky-500/25 border-sky-400 text-white hover:bg-sky-500/35'
-                            : 'bg-[#1e2636] border-white/25 text-white hover:bg-[#252f42] hover:border-neon-green/50',
-                        )}
-                      >
-                        <span className="block text-[15px] leading-tight">{player.name}</span>
-                        <span className="text-neon-green text-xl mt-1 inline-block">
-                          +{formatScore(pointsForCorrectWithLonda(gameState.currentGrade ?? 1, player.id, gameState.londaPollPlayerId))}
-                        </span>
-                      </button>
-
-                      {player.id === gameState.categoryChooserId && (
-                        <button
-                          type="button"
-                          onClick={() => handleScore(player.id, false)}
-                          className="w-full py-3 bg-red-600/20 text-red-100 border-2 border-red-500/50 font-mono font-bold uppercase text-xs rounded-xl hover:bg-red-600/30 transition-colors"
-                        >
-                          Wrong (−1 chooser)
-                        </button>
-                      )}
-                    </div>
-                  ))}
+                <p className="text-sm text-slate-600 font-mono">
+                  <span className="font-bold text-slate-800">Scoring: </span>
+                  use the bar fixed at the bottom of the screen — player names stay visible there.
+                </p>
                 </div>
               </section>
             </div>
+            {typeof document !== 'undefined' &&
+              createPortal(
+                <div
+                  className="fixed inset-x-0 bottom-0 z-[70] border-t-4 border-emerald-600 border-x-0 bg-white px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-12px_40px_rgba(0,0,0,0.18)] ring-1 ring-slate-200"
+                  style={{ isolation: 'isolate', color: '#0f172a' }}
+                  role="region"
+                  aria-label="Score the question"
+                >
+                  <div className="max-w-6xl mx-auto">
+                    <h2 className="text-center text-sm sm:text-base font-black uppercase tracking-wide text-slate-900 mb-1">
+                      Tap who got it right
+                    </h2>
+                    <p className="text-center font-mono text-[10px] sm:text-xs text-slate-600 mb-3">
+                      Chooser wrong: use the red button under their name.
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3">
+                      {gameState.players.map((player) => (
+                        <div key={player.id} className="flex flex-col gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleScore(player.id, true)}
+                            className={cn(
+                              'min-h-[4.25rem] w-full rounded-xl border-2 px-2 py-2.5 text-left shadow-sm font-sans',
+                              player.id === gameState.categoryChooserId
+                                ? 'bg-sky-100 border-sky-600 hover:bg-sky-200'
+                                : 'bg-slate-50 border-slate-400 hover:bg-white hover:border-emerald-500',
+                            )}
+                          >
+                            <span
+                              className="block text-sm sm:text-base font-black uppercase break-words leading-tight"
+                              style={{ color: '#0f172a', WebkitTextFillColor: '#0f172a' }}
+                            >
+                              {player.name}
+                            </span>
+                            <span
+                              className="mt-1 block text-lg sm:text-xl font-black tabular-nums"
+                              style={{ color: '#047857', WebkitTextFillColor: '#047857' }}
+                            >
+                              +
+                              {formatScore(
+                                pointsForCorrect(gameState.currentGrade ?? 1),
+                              )}
+                            </span>
+                          </button>
+                          {player.id === gameState.categoryChooserId && (
+                            <button
+                              type="button"
+                              onClick={() => handleScore(player.id, false)}
+                              className="w-full rounded-lg border-2 border-red-500 bg-red-50 py-2 font-mono text-[10px] font-bold uppercase text-red-900 hover:bg-red-100"
+                              style={{ color: '#7f1d1d', WebkitTextFillColor: '#7f1d1d' }}
+                            >
+                              Wrong (−1)
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>,
+                document.body,
+              )}
+            </Fragment>
           )}
 
           {/* ── SUBJECT RESULTS ── */}
@@ -1511,21 +1496,21 @@ export default function SmarterThan5thGraderApp() {
                 <div
                   className="inline-block mb-6"
                 >
-                  <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-amber-glow to-hot-pink flex items-center justify-center">
+                  <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-amber-400 to-pink-500 flex items-center justify-center shadow-lg">
                     <Trophy className="w-10 h-10 text-white" />
                   </div>
                 </div>
-                <h2 className="text-5xl sm:text-7xl font-display uppercase tracking-tighter">
+                <h2 className="text-5xl sm:text-7xl font-display uppercase tracking-tighter text-slate-900">
                   Round <span className="text-gradient-warm">Winner</span>
                 </h2>
-                <p className="text-white/40 font-mono text-sm mt-2">{gameState.currentSubject}</p>
+                <p className="text-slate-600 font-mono text-sm mt-2">{gameState.currentSubject}</p>
               </div>
 
               <div
-                className="max-w-md mx-auto text-center p-10 rounded-3xl bg-gradient-to-br from-amber-glow/10 to-hot-pink/5 border border-amber-glow/20"
+                className="max-w-md mx-auto text-center p-10 rounded-3xl bg-amber-50 border-2 border-amber-200 shadow-md"
               >
-                <h3 className="text-5xl sm:text-6xl font-display uppercase mb-2">{subjectWinner.name}</h3>
-                <p className="text-3xl font-mono font-bold text-neon-green">
+                <h3 className="text-5xl sm:text-6xl font-display uppercase mb-2 text-slate-900">{subjectWinner.name}</h3>
+                <p className="text-3xl font-mono font-bold text-emerald-700">
                   {formatScore(subjectWinner.subjectScore)} Points
                 </p>
               </div>
@@ -1533,7 +1518,7 @@ export default function SmarterThan5thGraderApp() {
               <div
                 className="max-w-lg mx-auto"
               >
-                <h3 className="text-sm font-mono uppercase text-white/40 tracking-widest mb-4 text-center">
+                <h3 className="text-sm font-mono uppercase text-slate-500 tracking-widest mb-4 text-center">
                   Full Leaderboard
                 </h3>
                 <Leaderboard players={gameState.players} showSubjectScore />
@@ -1554,11 +1539,10 @@ export default function SmarterThan5thGraderApp() {
                       currentQuestion: null,
                       categoryChooserId: null,
                       questionsAnsweredInSubject: 0,
-                      uneesBeesActive: false,
-                      uneesBeesSelections: [],
+                      hiddenOptions: [],
                     }));
                   }}
-                  className="px-12 py-5 bg-gradient-to-r from-electric-blue to-deep-purple text-white text-2xl font-display uppercase rounded-2xl hover:brightness-110 active:scale-[0.98] transition-all shadow-lg shadow-electric-blue/20"
+                  className="px-12 py-5 bg-gradient-to-r from-blue-600 to-violet-600 text-white text-2xl font-display uppercase rounded-2xl hover:brightness-110 active:scale-[0.98] transition-all shadow-lg"
                 >
                   Next Subject
                 </button>
@@ -1578,24 +1562,24 @@ export default function SmarterThan5thGraderApp() {
                   <div
                     className="inline-block"
                   >
-                    <div className="w-28 h-28 mx-auto rounded-full bg-gradient-to-br from-amber-glow via-hot-pink to-deep-purple flex items-center justify-center shadow-[0_0_60px_rgba(245,158,11,0.35)]">
+                    <div className="w-28 h-28 mx-auto rounded-full bg-gradient-to-br from-amber-400 via-pink-500 to-violet-600 flex items-center justify-center shadow-xl">
                       <Crown className="w-14 h-14 text-white drop-shadow-lg" />
                     </div>
                   </div>
 
-                  <h2 className="text-5xl sm:text-7xl lg:text-8xl font-display uppercase tracking-tighter">
+                  <h2 className="text-5xl sm:text-7xl lg:text-8xl font-display uppercase tracking-tighter text-slate-900">
                     Game <span className="text-gradient-warm">Over</span>
                   </h2>
-                  <p className="text-white/40 font-mono text-sm tracking-widest uppercase">Final Results</p>
+                  <p className="text-slate-600 font-mono text-sm tracking-widest uppercase">Final Results</p>
                 </div>
 
                 {champion && (
                   <div
-                    className="max-w-lg mx-auto text-center p-12 rounded-3xl bg-gradient-to-br from-amber-glow/10 via-hot-pink/5 to-deep-purple/5 border border-amber-glow/20 shadow-[0_0_40px_rgba(245,158,11,0.1)]"
+                    className="max-w-lg mx-auto text-center p-12 rounded-3xl bg-amber-50 border-2 border-amber-200 shadow-md"
                   >
-                    <p className="text-white/50 font-mono text-xs uppercase tracking-[0.3em] mb-3">Champion</p>
+                    <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.3em] mb-3">Champion</p>
                     <h3 className="text-6xl sm:text-7xl font-display uppercase mb-4 text-gradient-warm">{champion.name}</h3>
-                    <p className="text-4xl font-mono font-bold text-neon-green">
+                    <p className="text-4xl font-mono font-bold text-emerald-700">
                       {formatScore(champion.totalScore)} Points
                     </p>
                   </div>
@@ -1604,7 +1588,7 @@ export default function SmarterThan5thGraderApp() {
                 <div
                   className="max-w-lg mx-auto"
                 >
-                  <h3 className="text-sm font-mono uppercase text-white/40 tracking-widest mb-4 text-center">
+                  <h3 className="text-sm font-mono uppercase text-slate-500 tracking-widest mb-4 text-center">
                     Final Standings
                   </h3>
                   <div className="space-y-2">
@@ -1612,26 +1596,26 @@ export default function SmarterThan5thGraderApp() {
                       <div
                         key={p.id}
                         className={cn(
-                          'flex items-center justify-between p-4 rounded-xl border',
+                          'flex items-center justify-between p-4 rounded-xl border shadow-sm',
                           i === 0
-                            ? 'bg-amber-glow/10 border-amber-glow/30'
+                            ? 'bg-amber-50 border-amber-300'
                             : i === 1
-                              ? 'bg-white/[0.04] border-white/15'
+                              ? 'bg-slate-100 border-slate-300'
                               : i === 2
-                                ? 'bg-white/[0.03] border-white/10'
-                                : 'bg-white/[0.02] border-white/5',
+                                ? 'bg-orange-50 border-orange-200'
+                                : 'bg-white border-slate-200',
                         )}
                       >
                         <div className="flex items-center gap-3">
                           <span className={cn(
                             'w-8 h-8 rounded-full flex items-center justify-center text-sm font-mono font-bold',
-                            i === 0 ? 'bg-amber-glow/20 text-amber-glow' : 'bg-white/10 text-white/40',
+                            i === 0 ? 'bg-amber-200 text-amber-900' : 'bg-slate-200 text-slate-600',
                           )}>
                             {i + 1}
                           </span>
-                          <span className="font-black uppercase text-sm">{p.name}</span>
+                          <span className="font-black uppercase text-sm text-slate-900">{p.name}</span>
                         </div>
-                        <span className="font-mono font-bold text-neon-green text-lg">{formatScore(p.totalScore)}</span>
+                        <span className="font-mono font-bold text-emerald-700 text-lg tabular-nums">{formatScore(p.totalScore)}</span>
                       </div>
                     ))}
                   </div>
@@ -1643,7 +1627,7 @@ export default function SmarterThan5thGraderApp() {
                   <button
                     type="button"
                     onClick={resetGame}
-                    className="px-12 py-5 bg-gradient-to-r from-electric-blue to-deep-purple text-white text-2xl font-display uppercase rounded-2xl hover:brightness-110 active:scale-[0.98] transition-all shadow-lg shadow-electric-blue/20"
+                    className="px-12 py-5 bg-gradient-to-r from-blue-600 to-violet-600 text-white text-2xl font-display uppercase rounded-2xl hover:brightness-110 active:scale-[0.98] transition-all shadow-lg"
                   >
                     New Game
                   </button>
@@ -1660,7 +1644,7 @@ export default function SmarterThan5thGraderApp() {
                       a.click();
                       URL.revokeObjectURL(url);
                     }}
-                    className="px-8 py-5 bg-white/5 border border-white/15 text-white/70 text-lg font-display uppercase rounded-2xl hover:bg-white/10 active:scale-[0.98] transition-all"
+                    className="px-8 py-5 bg-white border border-slate-300 text-slate-700 text-lg font-display uppercase rounded-2xl hover:bg-slate-50 active:scale-[0.98] transition-all shadow-sm"
                   >
                     Download Log
                   </button>
@@ -1673,18 +1657,18 @@ export default function SmarterThan5thGraderApp() {
       {/* ── Host Panel (Floating Bottom Sheet) ── */}
       {hostPanelOpen && gameState.players.length > 0 && (
           <div
-            className="fixed inset-x-0 bottom-0 z-[60] max-h-[60vh] overflow-y-auto border-t border-white/10 bg-[#0a0a0f] shadow-[0_-8px_30px_rgba(0,0,0,0.5)]"
+            className="fixed inset-x-0 bottom-0 z-[80] max-h-[60vh] overflow-y-auto border-t-2 border-slate-200 bg-white shadow-[0_-12px_40px_rgba(0,0,0,0.12)]"
           >
             <div className="max-w-7xl mx-auto px-4 py-4 space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-lg font-display uppercase text-white/80 flex items-center gap-2">
-                  <Settings2 className="w-4 h-4 text-electric-blue" />
+                <h2 className="text-lg font-display uppercase text-slate-900 flex items-center gap-2">
+                  <Settings2 className="w-4 h-4 text-blue-600" />
                   Host Controls · Adjust Points
                 </h2>
                 <button
                   type="button"
                   onClick={() => setHostPanelOpen(false)}
-                  className="px-4 py-2 bg-white/10 text-white font-mono text-xs font-bold uppercase rounded-lg border border-white/15 hover:bg-white/15 transition-all"
+                  className="px-4 py-2 bg-slate-100 text-slate-800 font-mono text-xs font-bold uppercase rounded-lg border border-slate-300 hover:bg-slate-200 transition-all"
                 >
                   Close
                 </button>
@@ -1693,11 +1677,11 @@ export default function SmarterThan5thGraderApp() {
                 {gameState.players.map((p) => (
                   <div
                     key={p.id}
-                    className="flex flex-col gap-3 border border-white/10 rounded-xl p-4 bg-white/[0.03]"
+                    className="flex flex-col gap-3 border border-slate-200 rounded-xl p-4 bg-slate-50 shadow-sm"
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="font-black uppercase text-sm">{p.name}</span>
-                      <span className="text-neon-green font-mono font-bold text-lg">{formatScore(p.totalScore)}</span>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-black uppercase text-sm text-slate-900">{p.name}</span>
+                      <span className="text-emerald-700 font-mono font-bold text-lg tabular-nums shrink-0">{formatScore(p.totalScore)}</span>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {[-5, -2, -1].map((d) => (
@@ -1705,7 +1689,7 @@ export default function SmarterThan5thGraderApp() {
                           key={d}
                           type="button"
                           onClick={() => hostAdjustTotal(p.id, d)}
-                          className="px-3 py-2 bg-red-500/15 text-red-400 font-mono text-xs font-bold uppercase rounded-lg border border-red-500/20 hover:bg-red-500/25 transition-all min-w-[44px]"
+                          className="px-3 py-2 bg-red-50 text-red-700 font-mono text-xs font-bold uppercase rounded-lg border border-red-200 hover:bg-red-100 transition-all min-w-[44px]"
                         >
                           {d}
                         </button>
@@ -1715,7 +1699,7 @@ export default function SmarterThan5thGraderApp() {
                           key={d}
                           type="button"
                           onClick={() => hostAdjustTotal(p.id, d)}
-                          className="px-3 py-2 bg-neon-green/15 text-neon-green font-mono text-xs font-bold uppercase rounded-lg border border-neon-green/20 hover:bg-neon-green/25 transition-all min-w-[44px]"
+                          className="px-3 py-2 bg-emerald-50 text-emerald-800 font-mono text-xs font-bold uppercase rounded-lg border border-emerald-200 hover:bg-emerald-100 transition-all min-w-[44px]"
                         >
                           +{d}
                         </button>
@@ -1727,12 +1711,12 @@ export default function SmarterThan5thGraderApp() {
                         value={customAdjust[p.id] ?? ''}
                         onChange={(e) => setCustomAdjust((prev) => ({ ...prev, [p.id]: e.target.value }))}
                         placeholder="Custom"
-                        className="flex-1 bg-white/5 border border-white/15 rounded-lg px-3 py-2 text-xs font-mono text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-electric-blue/50 min-w-0"
+                        className="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs font-mono text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 min-w-0"
                       />
                       <button
                         type="button"
                         onClick={() => handleCustomAdjust(p.id)}
-                        className="px-3 py-2 bg-electric-blue/15 text-electric-blue font-mono text-xs font-bold uppercase rounded-lg border border-electric-blue/30 hover:bg-electric-blue/25 transition-all"
+                        className="px-3 py-2 bg-blue-100 text-blue-900 font-mono text-xs font-bold uppercase rounded-lg border border-blue-300 hover:bg-blue-200 transition-all"
                       >
                         Apply
                       </button>
