@@ -164,7 +164,7 @@ export const worldPolitics: Record<number, Fact[]> = {
     ['What is the capital of Egypt?', 'Cairo', 'Alexandria', 'Luxor', 'Giza'],
     ['What is a trade embargo?', 'A ban on trade with a country', 'A new shipping route', 'A trade fair', 'A tax reduction'],
     ['What is the Supreme Court?', 'Highest court in the US', 'A sports arena', 'A university', 'A TV show'],
-    ['What is the ASEAN?', 'A Southeast Asian group of nations', 'An airline', 'A sports league', 'A music award'],
+    ['What is the ASEAN?', 'A Southeast Asian group of nations', 'A European political and economic union', 'A North Atlantic military alliance', 'A group of Arab nations'],
     ['What is gerrymandering?', 'Redrawing voting districts unfairly', 'A card game', 'A cooking style', 'A dance form'],
     ['How many justices sit on the US Supreme Court?', '9', '7', '12', '5'],
     ['What is a constitutional amendment?', 'A formal change to a constitution', 'A school award', 'A building plan', 'A holiday'],

@@ -254,7 +254,7 @@ export const nhl: Record<number, Fact[]> = {
     ['What is Connor McDavid speed edge measured as?', 'Among fastest end-to-end carriers in modern NHL', 'Slowest forward', 'Goalie speed leader', 'Enforcer'],
     ['What is Auston Matthews shot profile?', 'Elite wrister from slot; goal-scoring forward', 'Defensive specialist', 'Goalie', 'Stay-at-home'],
     ['What is Cale Makar defenseman offense model?', 'High mobility QB from blue line; Norris-level peak', 'Pure enforcer', 'Goalie', 'Face-off specialist only'],
-    ['What is Igor Shesterkin peak season note?', 'Elite save results vs expectations (Vezina era)', 'Forward', 'Enforcer', 'Retired 2010'],
+    ['What is Igor Shesterkin peak season note?', 'Elite save results vs expectations (Vezina era)', 'Andrei Vasilevskiy', 'Connor Hellebuyck', 'Carey Price'],
     ['What is Carey Price Montreal era legacy?', 'Vezina/Hart peak; franchise face', 'Never starter', 'Winger', 'Coach'],
     ['What is P.K. Subban brand + skill note?', 'Dynamic offensive D; major media personality', 'Goalie', 'Enforcer only', 'Never Norris candidate'],
     ['What is Jaromir Jagr longevity fact?', 'Played into 40s across leagues', 'Retired at 25', 'Never left Czech league', 'Goalie'],

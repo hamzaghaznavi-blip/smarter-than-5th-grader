@@ -77,7 +77,7 @@ export const grade5: [string, string, string, string, string][] = [
   ['What was Pakistan\'s first Oscar submission in decades (2013)?', 'Zinda Bhaag', 'Bol', 'Dukhtar', 'Seedlings'],
   ['Which Coke Studio producer era is often called the "golden" early years?', 'Rohail Hyatt (Seasons 1–6)', 'Strings (Season 10)', 'Ali Zafar', 'Zulfiqar Jabbar Khan'],
   ['Which 1977 Urdu romance film starring Waheed Murad and Shabnam is a Lollywood classic?', 'Aaina', 'Armaan', 'Umrao Jaan Ada', 'Dosti'],
-  ['What is the traditional communal thaal meal strongly associated with Dawoodi Bohra culture (general knowledge)?', 'Eating from one large platter as a community', 'Only iftar', 'Only Eid breakfast', 'A picnic blanket meal'],
+  ['What does \"onboarding\" usually mean at a workplace?', 'Helping a new employee get set up and trained', 'Offboarding an employee (helping them exit a company)', 'Giving an employee a laptop (but no training)', 'Adding an employee to email and tools (but no training)'],
   ['SRK\'s first Bollywood film as lead was?', 'Deewana', 'Raju Ban Gaya Gentleman', 'Dil Aashna Hai', 'Chamatkar'],
   ['Dilip Kumar\'s birth name was?', 'Muhammad Yusuf Khan', 'Dilip Kumar', 'Yusuf Ali', 'Kumar Gopal'],
   ['Which Pakistani cricketer married Indian tennis star Sania Mirza?', 'Shoaib Malik', 'Wasim Akram', 'Shahid Afridi', 'Imran Khan'],
